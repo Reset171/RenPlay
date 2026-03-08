@@ -8,6 +8,7 @@ key.properties
 build/
 app/build/
 .cxx/
+*.orig
 obj/
 local.properties
 .idea/
