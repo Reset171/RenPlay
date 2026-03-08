@@ -1,0 +1,3 @@
+-keep class org.renpy.** { *; }
+-keep class org.libsdl.** { *; }
+-keep class org.jnius.** { *; }

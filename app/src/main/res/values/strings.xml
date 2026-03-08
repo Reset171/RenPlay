@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RenPlay</string>
+
+    <string name="perm_title">Требуется доступ к файлам</string>
+    <string name="perm_desc">Приложению необходимо разрешение на доступ ко всем файлам для поиска и запуска проектов Ren\'Py.</string>
+    <string name="perm_button">Предоставить разрешение</string>
+
+    <string name="main_title">RenPlay</string>
+    <string name="label_project">Название игры</string>
+    <string name="label_version">Версия (опционально)</string>
+    <string name="btn_choose_icon">ВЫБРАТЬ СВОЮ ИКОНКУ</string>
+    <string name="icon_selected">ИКОНКА ВЫБРАНА</string>
+    
+    <string name="nav_appearance">Внешний вид</string>
+    <string name="nav_about">О программе</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="nav_engine_settings">Настройки Ren\'Py</string>
+    <string name="setting_use_game_details">Экран деталей игры</string>
+    <string name="setting_use_game_details_desc">Показывать подробную информацию об игре перед запуском</string>
+
+    <string name="group_language">Язык</string>
+    <string name="item_app_language">Язык приложения</string>
+    <string name="language_system">Системный</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
+    
+    <string name="group_theme">Тема</string>
+    <string name="item_app_theme">Тема приложения</string>
+    <string name="item_dynamic_colors">Динамические цвета</string>
+    <string name="item_enable_blur">Размытие интерфейса</string>
+    <string name="setting_advanced_animations">Расширенные анимации</string>
+    <string name="setting_advanced_animations_desc">Плавные переходы и перестроение списков</string>
+    
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_black">Чёрная</string>
+
+    <string name="engine_hw_video">Аппаратное ускорение</string>
+    <string name="engine_hw_video_desc">Включить аппаратное ускорение для видео.</string>
+    <string name="engine_phone_variant">Мобильный интерфейс</string>
+    <string name="engine_phone_variant_desc">Использовать мобильный интерфейс.</string>
+
+    <string name="error_no_game_folder">Ошибка: В папке проекта нет подпапки \'game\'!</string>
+    <string name="add_game_title">Новая игра</string>
+    <string name="add_game_button">ДОБАВИТЬ В БИБЛИОТЕКУ</string>
+    <string name="playtime_less_than_minute">Менее минуты</string>
+    <string name="playtime_format">%1$d ч %2$d мин</string>
+    <string name="playtime_format_min">%1$d мин</string>
+    <string name="logs_not_found">Логов Ren\'Py не найдено в буфере.</string>
+    <string name="logs_read_error">Ошибка чтения логов: %1$s</string>
+    <string name="logs_dialog_title">Логи движка</string>
+    <string name="logs_copy_button">СКОПИРОВАТЬ В БУФЕР</string>
+    <string name="logs_copied_toast">Скопировано</string>
+    <string name="engine_model_rendering">Рендеринг на основе моделей</string>
+    <string name="engine_model_rendering_desc">Устраняет медленные анимации меню на некоторых устройствах.</string>
+    <string name="engine_force_recompile">Перекомпилировать скрипты</string>
+    <string name="engine_force_recompile_desc">Всегда перекомпилировать скрипты для улучшения совместимости в обмен на увеличение времени загрузки.</string>
+
+    <string name="version_prefix">Версия: %1$s</string>
+    <string name="group_resources">Ресурсы</string>
+    <string name="item_github">GitHub</string>
+    <string name="desc_github">Исходный код проекта</string>
+    <string name="item_licenses">Лицензии ПО</string>
+    <string name="desc_licenses">Открытый исходный код</string>
+    <string name="licenses_title">Лицензии открытого ПО</string>
+    <string name="group_development">Разработчик</string>
+    <string name="author_name">Reset</string>
+
+    <string name="picker_title">Выбор папки</string>
+    <string name="picker_select_btn">ВЫБРАТЬ ЭТУ ПАПКУ</string>
+    <string name="picker_empty">Папка пуста</string>
+    <string name="picker_access_denied">Нет доступа</string>
+
+    <string name="main_empty_project_title">Проект не выбран</string>
+    <string name="main_empty_project_desc">Добавьте директорию с визуальными новеллами</string>
+
+    <string name="action_search">Поиск</string>
+    <string name="action_sort">Сортировка</string>
+    <string name="sort_newest">Сначала новые</string>
+    <string name="sort_alphabetical">По алфавиту</string>
+    <string name="sort_manual">Без сортировки (вручную)</string>
+    <string name="sort_manual_hint">Удерживайте карточку для перемещения</string>
+    
+    <string name="game_details_play">ИГРАТЬ</string>
+    <string name="game_details_shortcut">Создать ярлык</string>
+    <string name="game_details_shortcut_desc">Добавить на главный экран</string>
+    <string name="game_details_logs">Смотреть логи</string>
+    <string name="game_details_logs_desc">Отладка и ошибки движка</string>
+    <string name="game_details_delete">Удалить из библиотеки</string>
+    <string name="game_details_delete_desc">Файлы игры останутся на устройстве</string>
+    <string name="label_tool">Управление</string>
+    
+    <string name="stat_total">Всего в игре</string>
+    <string name="stat_today">За сегодня</string>
+    <string name="library_search_hint">Поиск...</string>
+    <string name="library_empty_search">Ничего не найдено</string>
+</resources>
