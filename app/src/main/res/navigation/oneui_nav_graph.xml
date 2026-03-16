@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/oneui_nav_graph"
+    app:startDestination="@id/nav_library">
+
+    <fragment
+        android:id="@+id/nav_library"
+        android:name="ru.reset.renplay.ui.oneui.library.OneUiLibraryFragment"
+        android:label="@string/main_title" />
+
+    <activity
+        android:id="@+id/nav_settings"
+        android:name="ru.reset.renplay.ui.oneui.settings.OneUiSettingsActivity"
+        android:label="@string/nav_settings" />
+
+    <activity
+        android:id="@+id/nav_about"
+        android:name="ru.reset.renplay.ui.oneui.settings.OneUiAboutActivity"
+        android:label="@string/nav_about" />
+
+</navigation>

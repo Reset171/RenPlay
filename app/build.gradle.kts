@@ -11,12 +11,6 @@ android {
     namespace = "ru.reset.renplay"
     compileSdk = 36
 
-    sourceSets {
-        getByName("main") {
-            java.srcDirs("src/main/kotlin")
-        }
-    }
-
     lint {
         checkReleaseBuilds = false
         abortOnError = false
@@ -26,8 +20,8 @@ android {
         applicationId = "ru.reset.renplay"
         minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = 2
+        versionName = "0.2"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -90,7 +84,34 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module("androidx.core:core")).using(module("sesl.androidx.core:core:1.17.0+1.0.7-sesl8+rev1"))
+        substitute(module("androidx.core:core-ktx")).using(module("sesl.androidx.core:core-ktx:1.17.0+1.0.0-sesl8+rev0"))
+        substitute(module("androidx.appcompat:appcompat")).using(module("sesl.androidx.appcompat:appcompat:1.7.1+1.0.21-sesl8+rev8"))
+        substitute(module("androidx.recyclerview:recyclerview")).using(module("sesl.androidx.recyclerview:recyclerview:1.4.0+1.0.12-sesl8+rev3"))
+        substitute(module("androidx.customview:customview")).using(module("sesl.androidx.customview:customview:1.2.0-rc01+1.0.0-sesl8+rev0"))
+        substitute(module("androidx.drawerlayout:drawerlayout")).using(module("sesl.androidx.drawerlayout:drawerlayout:1.2.0+1.0.0-sesl8+rev0"))
+        substitute(module("androidx.fragment:fragment")).using(module("sesl.androidx.fragment:fragment:1.8.9+1.0.5-sesl8+rev1"))
+        substitute(module("androidx.preference:preference")).using(module("sesl.androidx.preference:preference:1.2.1+1.0.0-sesl8+rev1"))
+        substitute(module("androidx.viewpager:viewpager")).using(module("sesl.androidx.viewpager:viewpager:1.1.0-beta01+1.0.0-sesl8+rev0"))
+        substitute(module("androidx.viewpager2:viewpager2")).using(module("sesl.androidx.viewpager2:viewpager2:1.1.0+1.0.0-sesl8+rev0"))
+        substitute(module("androidx.coordinatorlayout:coordinatorlayout")).using(module("sesl.androidx.coordinatorlayout:coordinatorlayout:1.3.0+1.0.0-sesl8+rev0"))
+        substitute(module("androidx.slidingpanelayout:slidingpanelayout")).using(module("sesl.androidx.slidingpanelayout:slidingpanelayout:1.2.0+1.0.4-sesl8+rev0"))
+        substitute(module("androidx.swiperefreshlayout:swiperefreshlayout")).using(module("sesl.androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01+1.0.0-sesl8+rev0"))
+        substitute(module("com.google.android.material:material")).using(module("sesl.com.google.android.material:material:1.12.0+1.0.32-sesl8+rev2"))
+    }
+    exclude(group = "sesl.androidx.picker", module = "picker-color")
+    exclude(group = "sesl.androidx.picker", module = "picker-app")
+}
+
 dependencies {
+    implementation(libs.androidx.appcompat)
+    implementation(libs.oneui.design)
+    implementation(libs.oneui.icons)
+    implementation(libs.sesl.appcompat)
+    implementation(libs.sesl.material)
+    implementation(libs.sesl.recyclerview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(platform(libs.androidx.compose.bom))

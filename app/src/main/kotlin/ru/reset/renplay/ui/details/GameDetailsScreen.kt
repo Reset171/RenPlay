@@ -74,12 +74,17 @@ fun GameDetailsScreen(
     val iconCache by viewModel.iconCache.collectAsState()
     val advancedAnimationsEnabled by settingsViewModel.advancedAnimationsEnabled.collectAsState()
     
-    val project = projectsList.find { it.id == projectId }
-    
-    if (project == null) {
+    var displayProject by remember { mutableStateOf(projectsList.find { it.id == projectId }) }
+    LaunchedEffect(projectsList) {
+        val p = projectsList.find { it.id == projectId }
+        if (p != null) displayProject = p
+    }
+
+    if (displayProject == null) {
         LaunchedEffect(Unit) { navController.popBackStack() }
         return
     }
+    val project = displayProject!!
 
     var showCrashLogsDialog by remember { mutableStateOf(false) }
     var crashLogContent by remember { mutableStateOf("") }
@@ -591,7 +596,7 @@ fun GameDetailsScreen(
                     AppButton(
                         onClick = {
                             val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            val clip = android.content.ClipData.newPlainText("Crash Logs", crashLogContent)
+                            val clip = android.content.ClipData.newPlainText(context.getString(R.string.clip_crash_logs), crashLogContent)
                             clipboardManager.setPrimaryClip(clip)
                             Toast.makeText(context, context.getString(R.string.logs_copied_toast), Toast.LENGTH_SHORT).show()
                         },

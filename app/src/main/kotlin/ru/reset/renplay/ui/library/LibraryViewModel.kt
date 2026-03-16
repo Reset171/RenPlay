@@ -82,6 +82,10 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
         loadProjects()
     }
 
+    fun refreshProjects() {
+        loadProjects()
+    }
+
     private fun loadProjects() {
         val cachedJson = prefs.getString(KEY_PROJECTS_CACHE, null)
         if (!cachedJson.isNullOrEmpty()) {

@@ -8,7 +8,7 @@
 
     <string name="main_title">RenPlay</string>
     <string name="label_project">Game Title</string>
-    <string name="label_version">Version (optional)</string>
+    <string name="label_version">Version</string>
     <string name="btn_choose_icon">CHOOSE CUSTOM ICON</string>
     <string name="icon_selected">ICON SELECTED</string>
     
@@ -66,7 +66,7 @@
     <string name="desc_licenses">Third-party software</string>
     <string name="licenses_title">Open Source Licenses</string>
     <string name="group_development">Developer</string>
-    <string name="author_name">Reset</string>
+    <string name="author_name">Reset171</string>
 
     <string name="picker_title">Select Folder</string>
     <string name="picker_select_btn">SELECT THIS FOLDER</string>
@@ -96,4 +96,17 @@
     <string name="stat_today">Played Today</string>
     <string name="library_search_hint">Search...</string>
     <string name="library_empty_search">Nothing found</string>
+
+    <string name="action_view_type">View</string>
+    <string name="swipe_action_details">Details</string>
+    <string name="group_ui_style">UI Style</string>
+    <string name="ui_style_material">Material You</string>
+    <string name="ui_style_oneui">OneUI</string>
+    <string name="dialog_ui_style_title">App Style</string>
+    <string name="pref_category_ui">Interface</string>
+    <string name="pref_category_engine">Ren\'Py Engine</string>
+    <string name="pref_system_theme">System Theme</string>
+    <string name="pref_ui_style">App Style</string>
+    <string name="clip_crash_logs">Crash Logs</string>
+    <string name="clip_logs">Logs</string>
 </resources>

@@ -32,3 +32,4 @@ object AppViewModelProvider {
 
 fun CreationExtras.renPlayApplication(): RenPlayApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as RenPlayApplication)
+

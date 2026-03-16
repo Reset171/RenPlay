@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/iv_background_blur"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
+
+    <View
+        android:id="@+id/v_background_dim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <dev.oneuiproject.oneui.layout.ToolbarLayout
+        android:id="@+id/toolbar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:showNavButtonAsBack="true"
+        app:expandable="true"
+        app:expanded="false"
+        app:title=" "
+        app:mainRoundedCorners="none"
+        android:background="@android:color/transparent">
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:paddingHorizontal="10dp"
+            app:layout_location="main_content"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+                    android:id="@+id/container_header"
+                    android:background="?android:colorBackground"
+                    android:padding="8dp"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:edgeInsetTop="24dp"
+                    app:drawOverEdge="false"
+                    app:roundedCorners="all">
+
+                    <ImageView
+                        android:id="@+id/iv_game_icon"
+                        android:layout_width="100dp"
+                        android:layout_height="100dp"
+                        android:layout_margin="8dp"
+                        android:scaleType="centerCrop" />
+
+                    <TextView
+                        android:id="@+id/tv_game_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:gravity="center"
+                        android:textAppearance="?android:attr/textAppearanceListItem" />
+
+                    <TextView
+                        android:id="@+id/tv_game_version"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textAppearance="?android:attr/textAppearanceListItemSecondary"
+                        android:textColor="?android:attr/textColorSecondary" />
+
+                    <Button
+                        android:id="@+id/btn_play"
+                        style="@style/OneUI.ContainedPrimaryColorButtonTheme"
+                        android:layout_width="240dp"
+                        android:layout_height="52dp"
+                        android:layout_marginVertical="16dp"
+                        android:text="@string/game_details_play"
+                        android:textStyle="bold" />
+
+                </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
+
+                <dev.oneuiproject.oneui.widget.Separator
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:text="@string/nav_about" />
+
+                <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+                    android:id="@+id/container_stats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:colorBackground"
+                    android:orientation="vertical"
+                    app:roundedCorners="all">
+
+                    <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_stat_total"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/stat_total"
+                        app:icon="@drawable/ic_oui_time"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="true" />
+                        
+                    <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_stat_today"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/stat_today"
+                        app:icon="@drawable/ic_oui_time"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="false" />
+                        
+                </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
+
+                <dev.oneuiproject.oneui.widget.Separator
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:text="@string/label_tool" />
+
+                <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+                    android:id="@+id/container_actions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:colorBackground"
+                    android:orientation="vertical"
+                    app:roundedCorners="all">
+
+                    <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_action_shortcut"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/game_details_shortcut"
+                        app:summary="@string/game_details_shortcut_desc"
+                        app:icon="@drawable/ic_oui_pin_outline"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="true" />
+                        
+                    <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_action_logs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/game_details_logs"
+                        app:summary="@string/game_details_logs_desc"
+                        app:icon="@drawable/ic_oui_error"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="true" />
+                        
+                    <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_action_delete"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/game_details_delete"
+                        app:summary="@string/game_details_delete_desc"
+                        app:icon="@drawable/ic_oui_delete_outline"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="false" />
+                        
+                </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
+
+                <Space
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp" />
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </dev.oneuiproject.oneui.layout.ToolbarLayout>
+</FrameLayout>

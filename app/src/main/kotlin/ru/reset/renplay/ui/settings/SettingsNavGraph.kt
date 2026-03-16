@@ -9,6 +9,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
@@ -35,6 +36,8 @@ import ru.reset.renplay.ui.navigation.Screen
 @Composable
 fun SettingsNavGraph(
     mainNavController: NavController,
+    uiStyle: UiStyle,
+    onUiStyleChange: (UiStyle) -> Unit,
     useDynamicTheme: Boolean,
     onDynamicThemeChange: (Boolean) -> Unit,
     themeOption: ThemeOption,
@@ -52,7 +55,11 @@ fun SettingsNavGraph(
     val transitionState = remember { SettingsTransitionState() }
 
     CompositionLocalProvider(LocalSettingsTransition provides transitionState) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             NavHost(
                 navController = settingsNavController,
                 startDestination = Screen.SettingsList.route,
@@ -93,6 +100,8 @@ fun SettingsNavGraph(
                 composable(Screen.Appearance.route) {
                     AppearanceScreen(
                         navController = settingsNavController,
+                        uiStyle = uiStyle,
+                        onUiStyleChange = onUiStyleChange,
                         useDynamicTheme = useDynamicTheme,
                         onDynamicThemeChange = onDynamicThemeChange,
                         themeOption = themeOption,
@@ -116,3 +125,4 @@ fun SettingsNavGraph(
         }
     }
 }
+

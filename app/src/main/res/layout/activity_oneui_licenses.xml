@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dev.oneuiproject.oneui.layout.ToolbarLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/toolbar_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:showNavButtonAsBack="true"
+    app:title="@string/licenses_title"
+    app:expanded="false"
+    android:background="?attr/roundedCornerColor">
+
+    <dev.oneuiproject.oneui.widget.RoundedNestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_location="main_content"
+        app:fillHorizontalPadding="true"
+        android:paddingHorizontal="16dp">
+
+        <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+            android:id="@+id/licenses_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="?android:attr/colorBackground"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="40dp"
+            app:roundedCorners="all" />
+
+    </dev.oneuiproject.oneui.widget.RoundedNestedScrollView>
+
+</dev.oneuiproject.oneui.layout.ToolbarLayout>

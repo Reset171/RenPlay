@@ -1,5 +1,12 @@
 [versions]
 agp = "9.0.1"
+oneuiDesign = "0.9.5+oneui8"
+oneuiIcons = "1.1.0"
+seslAppcompat = "1.7.1+1.0.21-sesl8+rev8"
+seslMaterial = "1.12.0+1.0.32-sesl8+rev2"
+seslCore = "1.17.0+1.0.7-sesl8+rev1"
+seslRecyclerview = "1.4.0+1.0.12-sesl8+rev3"
+appcompat = "1.7.1"
 kotlin = "2.3.10"
 coreKtx = "1.18.0-alpha01"
 navigationCompose = "2.9.7"
@@ -10,6 +17,13 @@ kotlinxSerialization = "1.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+oneui-design = { module = "io.github.tribalfs:oneui-design", version.ref = "oneuiDesign" }
+oneui-icons = { module = "io.github.oneuiproject:icons", version.ref = "oneuiIcons" }
+sesl-appcompat = { module = "sesl.androidx.appcompat:appcompat", version.ref = "seslAppcompat" }
+sesl-material = { module = "sesl.com.google.android.material:material", version.ref = "seslMaterial" }
+sesl-core = { module = "sesl.androidx.core:core", version.ref = "seslCore" }
+sesl-recyclerview = { module = "sesl.androidx.recyclerview:recyclerview", version.ref = "seslRecyclerview" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }

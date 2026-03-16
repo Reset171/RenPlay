@@ -21,7 +21,25 @@ enum class ThemeOption {
     SYSTEM, LIGHT, DARK, BLACK
 }
 
+enum class UiStyle {
+    MATERIAL3, ONEUI
+}
+
 class SettingsViewModel(private val prefs: SharedPreferences) : ViewModel() {
+
+    private val _uiStyle = MutableStateFlow(
+        try {
+            UiStyle.valueOf(prefs.getString("ui_style", UiStyle.MATERIAL3.name)!!)
+        } catch (e: IllegalArgumentException) {
+            UiStyle.MATERIAL3
+        }
+    )
+    val uiStyle = _uiStyle.asStateFlow()
+
+    fun onUiStyleChanged(style: UiStyle) {
+        _uiStyle.value = style
+        prefs.edit().putString("ui_style", style.name).apply()
+    }
 
     private val _useDynamicTheme = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_THEME, true))
     val useDynamicTheme = _useDynamicTheme.asStateFlow()
@@ -109,3 +127,4 @@ class SettingsViewModel(private val prefs: SharedPreferences) : ViewModel() {
         prefs.edit().putBoolean(KEY_FORCE_RECOMPILE, enabled).apply()
     }
 }
+

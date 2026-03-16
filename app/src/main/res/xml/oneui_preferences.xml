@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/pref_category_ui">
+        <dev.oneuiproject.oneui.preference.HorizontalRadioPreference
+            android:key="darkMode"
+            android:title="@string/item_app_theme"
+            android:dependency="darkModeAuto"
+            app:entries="@array/preferences_darkmode_entries"
+            app:entriesImage="@array/preferences_darkmode_entries_image"
+            app:entryValues="@array/preferences_darkmode_values"
+            app:defaultValue="0"
+            app:viewType="image" />
+
+        <SwitchPreferenceCompat
+            android:disableDependentsState="true"
+            android:key="darkModeAuto"
+            app:defaultValue="true"
+            android:title="@string/pref_system_theme" />
+
+        <androidx.preference.DropDownPreference
+            android:key="ui_style"
+            android:title="@string/pref_ui_style"
+            app:entries="@array/pref_ui_entries"
+            app:entryValues="@array/pref_ui_values"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            android:key="use_dynamic_theme"
+            android:title="@string/item_dynamic_colors" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/pref_category_engine">
+        <SwitchPreferenceCompat
+            android:key="hw_video"
+            android:title="@string/engine_hw_video"
+            android:summary="@string/engine_hw_video_desc" />
+
+        <SwitchPreferenceCompat
+            android:key="phone_variant"
+            android:title="@string/engine_phone_variant"
+            android:summary="@string/engine_phone_variant_desc" />
+
+        <SwitchPreferenceCompat
+            android:key="model_rendering"
+            android:title="@string/engine_model_rendering"
+            android:summary="@string/engine_model_rendering_desc" />
+
+        <SwitchPreferenceCompat
+            android:key="force_recompile"
+            android:title="@string/engine_force_recompile"
+            android:summary="@string/engine_force_recompile_desc" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

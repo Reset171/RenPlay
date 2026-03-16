@@ -28,12 +28,19 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme">
+            android:theme="@style/AppTheme.OneUI">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".ui.oneui.details.OneUiGameDetailsActivity" android:theme="@style/AppTheme.OneUI" />
+        <activity android:name=".ui.oneui.settings.OneUiSettingsActivity" android:theme="@style/AppTheme.OneUI" />
+        <activity android:name=".ui.oneui.settings.OneUiAboutActivity" android:theme="@style/AppTheme.OneUI" />
+        <activity android:name=".ui.oneui.settings.OneUiLicensesActivity" android:theme="@style/AppTheme.OneUI" />
+        <activity android:name=".ui.oneui.settings.OneUiLicenseDetailActivity" android:theme="@style/AppTheme.OneUI" />
+        <activity android:name=".ui.oneui.picker.OneUiFolderPickerActivity" android:theme="@style/AppTheme.OneUI" />
 
         <activity
             android:name="org.renpy.android.PythonSDLActivity"
@@ -49,10 +56,19 @@
             android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
+        <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/file_paths" />
         </provider>
+
+        <meta-data
+            android:name="theming-meta"
+            android:value="theming_meta_renplay" />
+
+        <meta-data
+            android:name="theming-meta-xml"
+            android:value="@xml/theming_meta_renplay" />
 
     </application>
 </manifest>
+

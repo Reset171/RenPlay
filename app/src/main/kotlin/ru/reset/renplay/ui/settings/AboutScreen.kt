@@ -63,7 +63,10 @@ private val libraryData = listOf(
     LicenseInfo("HarfBuzz", "Copyright © Behdad Esfahbod and contributors", "Old MIT License", "https://harfbuzz.github.io/", R.raw.mit),
     LicenseInfo("libpng", "Copyright © Glenn Randers-Pehrson and contributors", "PNG License", "http://www.libpng.org/", R.raw.libpng),
     LicenseInfo("libjpeg-turbo", "Copyright © The libjpeg-turbo Project", "IJG License", "https://libjpeg-turbo.org/", R.raw.ijg),
-    LicenseInfo("libwebp", "Copyright © Google LLC", "Libwebp Licenses", "https://developers.google.com/speed/webp/", R.raw.libwebp_license)
+    LicenseInfo("libwebp", "Copyright © Google LLC", "Libwebp Licenses", "https://developers.google.com/speed/webp/", R.raw.libwebp_license),
+    LicenseInfo("OneUI Icons", "Copyright © 2022 Yanndroid & BlackMesa123", "MIT License", "https://github.com/OneUIProject/oneui-icons", R.raw.mit),
+    LicenseInfo("OneUI Design (Original Base)", "Copyright © 2022 Yanndroid & BlackMesa123", "MIT License", "https://github.com/OneUIProject/oneui-design", R.raw.mit),
+    LicenseInfo("OneUI Design & SESL (Tribalfs Fork)", "Copyright © 2024 Tribalfs", "MIT License", "https://github.com/tribalfs/oneui-design", R.raw.mit)
 ).sortedBy { it.name.lowercase() }
 
 @OptIn(ExperimentalMaterial3Api::class)

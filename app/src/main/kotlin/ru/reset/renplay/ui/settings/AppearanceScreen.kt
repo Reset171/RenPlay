@@ -57,6 +57,8 @@ import ru.reset.renplay.ui.navigation.Screen
 @Composable
 fun AppearanceScreen(
     navController: NavController,
+    uiStyle: UiStyle,
+    onUiStyleChange: (UiStyle) -> Unit,
     useDynamicTheme: Boolean,
     onDynamicThemeChange: (Boolean) -> Unit,
     themeOption: ThemeOption,
@@ -69,6 +71,7 @@ fun AppearanceScreen(
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showUiStyleDialog by remember { mutableStateOf(false) }
 
     val languageOptionsMap = remember {
         mapOf(
@@ -116,6 +119,16 @@ fun AppearanceScreen(
                 .verticalScroll(rememberScrollState())
         ) {
 
+            SettingsGroup(title = stringResource(R.string.group_ui_style)) {
+                SettingsItem(
+                    title = stringResource(R.string.pref_ui_style),
+                    description = if (uiStyle == UiStyle.MATERIAL3) stringResource(R.string.ui_style_material) else stringResource(R.string.ui_style_oneui),
+                    icon = painterResource(id = R.drawable.ic_theme),
+                    onClick = { showUiStyleDialog = true },
+                    showDivider = false
+                )
+            }
+
             SettingsGroup(title = stringResource(R.string.group_language)) {
             SettingsItem(
                 title = stringResource(R.string.item_app_language),
@@ -150,6 +163,7 @@ fun AppearanceScreen(
 
             SettingsItem(
                 title = stringResource(R.string.item_enable_blur),
+                description = if (ru.reset.renplay.utils.isBlurSupported(context)) stringResource(R.string.blur_supported) else stringResource(R.string.blur_unsupported),
                 icon = painterResource(id = R.drawable.ic_blur_circular),
                 onClick = { onEnableBlurChange(!enableBlur) },
                 trailingContent = {
@@ -190,6 +204,36 @@ fun AppearanceScreen(
             )
         }
     }
+    }
+
+    if (showUiStyleDialog) {
+        AppBottomPanel(
+            onDismissRequest = { showUiStyleDialog = false },
+            title = stringResource(R.string.dialog_ui_style_title),
+            icon = painterResource(id = R.drawable.ic_theme)
+        ) {
+            Column(
+                modifier = Modifier.padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AppSelectionItem(
+                    text = stringResource(R.string.ui_style_material),
+                    isSelected = (uiStyle == UiStyle.MATERIAL3),
+                    onClick = {
+                        onUiStyleChange(UiStyle.MATERIAL3)
+                        showUiStyleDialog = false
+                    }
+                )
+                AppSelectionItem(
+                    text = stringResource(R.string.ui_style_oneui),
+                    isSelected = (uiStyle == UiStyle.ONEUI),
+                    onClick = {
+                        onUiStyleChange(UiStyle.ONEUI)
+                        showUiStyleDialog = false
+                    }
+                )
+            }
+        }
     }
 
     if (showLanguageDialog) {

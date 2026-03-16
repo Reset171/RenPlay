@@ -27,11 +27,14 @@ import ru.reset.renplay.ui.picker.FolderPickerScreen
 import ru.reset.renplay.ui.details.GameDetailsScreen
 import ru.reset.renplay.ui.library.LibraryScreen
 import ru.reset.renplay.ui.settings.ThemeOption
+import ru.reset.renplay.ui.settings.UiStyle
 import ru.reset.renplay.ui.settings.SettingsNavGraph
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AppNavGraph(
+    uiStyle: UiStyle,
+    onUiStyleChange: (UiStyle) -> Unit,
     useDynamicTheme: Boolean,
     onDynamicThemeChange: (Boolean) -> Unit,
     themeOption: ThemeOption,
@@ -106,6 +109,8 @@ fun AppNavGraph(
                 composable(Screen.Settings.route) {
                     SettingsNavGraph(
                         mainNavController = navController,
+                        uiStyle = uiStyle,
+                        onUiStyleChange = onUiStyleChange,
                         useDynamicTheme = useDynamicTheme,
                         onDynamicThemeChange = onDynamicThemeChange,
                         themeOption = themeOption,

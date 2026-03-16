@@ -210,17 +210,7 @@ fun LibraryScreen(
 
     AppScaffold(
         topBar = {
-            if (isSearchActive) {
-                AppSearchAppBar(
-                    query = searchQuery,
-                    onQueryChange = { viewModel.updateSearchQuery(it) },
-                    onClose = { 
-                        isSearchActive = false
-                        viewModel.updateSearchQuery("")
-                    },
-                    placeholder = stringResource(R.string.library_search_hint)
-                )
-            } else {
+            Box {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -291,6 +281,17 @@ fun LibraryScreen(
                         AppIcon(painterResource(R.drawable.ic_settings), null)
                     }
                 }
+
+                AppSearchAppBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.updateSearchQuery(it) },
+                    isActive = isSearchActive,
+                    onActiveChange = { 
+                        isSearchActive = it
+                        if (!it) viewModel.updateSearchQuery("")
+                    },
+                    placeholder = stringResource(R.string.library_search_hint)
+                )
             }
         },
         floatingActionButton = {
@@ -497,6 +498,9 @@ fun SeamlessGameCard(
         val subTitleColor by transition.animateColor(label = "sub_color") { 
             if (it) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant 
         }
+        val borderColor by transition.animateColor(label = "border_color") {
+            if (it) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else Color.Transparent
+        }
 
         val infoVerticalBias by transition.animateFloat(label = "info_v") { if (it) -1f else 0f }
         val infoEndPadding by transition.animateDp(label = "info_end") { if (it) 8.dp else 16.dp }
@@ -510,6 +514,7 @@ fun SeamlessGameCard(
             imageSize = imageSize, imagePadding = imagePadding, imageRadius = imageRadius,
             gradientAlpha = gradientAlpha, verticalBias = verticalBias, textStartPadding = textStartPadding,
             textBottomPadding = textBottomPadding, titleColor = titleColor, subTitleColor = subTitleColor,
+            borderColor = borderColor,
             infoVerticalBias = infoVerticalBias, infoEndPadding = infoEndPadding, infoTopPadding = infoTopPadding,
             activeProjectId = activeProjectId, useGameDetailsScreen = useGameDetailsScreen,
             onClick = onClick, onInfoClick = onInfoClick
@@ -533,6 +538,7 @@ fun SeamlessGameCard(
             textBottomPadding = if (isGridView) 16.dp else 0.dp, 
             titleColor = if (isGridView) Color.White else MaterialTheme.colorScheme.onSurface, 
             subTitleColor = if (isGridView) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
+            borderColor = if (isGridView) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else Color.Transparent,
             infoVerticalBias = if (isGridView) -1f else 0f,
             infoEndPadding = if (isGridView) 8.dp else 16.dp,
             infoTopPadding = if (isGridView) 8.dp else 0.dp,
@@ -567,6 +573,7 @@ private fun GameCardContent(
     textBottomPadding: androidx.compose.ui.unit.Dp,
     titleColor: Color,
     subTitleColor: Color,
+    borderColor: Color,
     infoVerticalBias: Float,
     infoEndPadding: androidx.compose.ui.unit.Dp,
     infoTopPadding: androidx.compose.ui.unit.Dp,
@@ -594,7 +601,8 @@ private fun GameCardContent(
             modifier = Modifier.fillMaxWidth().height(height),
             containerColor = containerColor,
             shape = RoundedCornerShape(cardRadius),
-            elevation = elevation
+            elevation = elevation,
+            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 Box(modifier = Modifier.fillMaxSize().appBlurSource(cardBlurState)) {

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dev.oneuiproject.oneui.layout.ToolbarLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/toolbar_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:showNavButtonAsBack="true"
+    app:expandable="true"
+    app:expanded="false"
+    app:title="@string/nav_about"
+    android:background="?roundedCornerColor">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?roundedCornerColor"
+        android:paddingHorizontal="10dp"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+                android:background="?android:colorBackground"
+                android:padding="8dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:edgeInsetTop="24dp"
+                app:drawOverEdge="false"
+                app:roundedCorners="all">
+
+                <ImageView
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:layout_margin="8dp"
+                    android:src="@drawable/ic_launcher" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:textAppearance="?android:attr/textAppearanceListItem" />
+
+                <TextView
+                    android:id="@+id/tv_app_version"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textAppearance="?android:attr/textAppearanceListItemSecondary"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="16dp"/>
+
+            </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
+
+            <dev.oneuiproject.oneui.widget.Separator
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/group_resources" />
+
+            <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?android:colorBackground"
+                android:orientation="vertical"
+                app:roundedCorners="all">
+
+                <dev.oneuiproject.oneui.widget.CardItemView
+                    android:id="@+id/card_about_github"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:title="@string/item_github"
+                    app:summary="@string/desc_github"
+                    app:icon="@drawable/ic_oui_internet_website"
+                    app:showTopDivider="false"
+                    app:showBottomDivider="true" />
+
+                <dev.oneuiproject.oneui.widget.CardItemView
+                    android:id="@+id/card_about_licenses"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:title="@string/item_licenses"
+                    app:summary="@string/desc_licenses"
+                    app:icon="@drawable/ic_oui_info_outline"
+                    app:showTopDivider="false"
+                    app:showBottomDivider="false" />
+
+            </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
+
+            <dev.oneuiproject.oneui.widget.Separator
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/group_development" />
+
+            <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?android:colorBackground"
+                android:orientation="vertical"
+                app:roundedCorners="all">
+
+                <dev.oneuiproject.oneui.widget.CardItemView
+                    android:id="@+id/card_about_dev"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:title="@string/author_name"
+                    app:icon="@drawable/ic_oui_contact"
+                    app:showTopDivider="false"
+                    app:showBottomDivider="false" />
+
+            </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="40dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</dev.oneuiproject.oneui.layout.ToolbarLayout>

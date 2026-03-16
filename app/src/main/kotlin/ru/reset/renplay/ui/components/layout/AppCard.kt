@@ -34,6 +34,7 @@ fun AppCard(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     elevation: Dp = 2.dp,
     shape: RoundedCornerShape = RoundedCornerShape(28.dp),
+    border: androidx.compose.foundation.BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -86,6 +87,7 @@ fun AppCard(
             contentColor = contentColor
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        border = border,
         content = {
             Column {
                 content()
