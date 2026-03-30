@@ -1,6 +1,6 @@
 [versions]
 agp = "9.0.1"
-oneuiDesign = "0.9.5+oneui8"
+oneuiDesign = "0.9.6+oneui8"
 oneuiIcons = "1.1.0"
 seslAppcompat = "1.7.1+1.0.21-sesl8+rev8"
 seslMaterial = "1.12.0+1.0.32-sesl8+rev2"
