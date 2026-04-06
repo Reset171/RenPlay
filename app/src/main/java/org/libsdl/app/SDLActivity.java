@@ -98,6 +98,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     public static NativeState mNextNativeState;
     public static NativeState mCurrentNativeState;
+    public static String mEngineLibPath = null;
 
     /** If shared libraries (e.g. SDL or the native application) could not be loaded. */
     public static boolean mBrokenLibraries = true;
@@ -143,6 +144,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         } else {
             library = "libmain.so";
         }
+        if (mEngineLibPath != null) {
+            return mEngineLibPath + "/" + library;
+        }
         return getContext().getApplicationInfo().nativeLibraryDir + "/" + library;
     }
 
@@ -176,7 +180,11 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Load the .so
     public void loadLibraries() {
        for (String lib : getLibraries()) {
-          SDL.loadLibrary(lib);
+           if (mEngineLibPath != null) {
+               System.load(mEngineLibPath + "/lib" + lib + ".so");
+           } else {
+               SDL.loadLibrary(lib);
+           }
        }
     }
 
@@ -295,9 +303,36 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         setContentView(mLayout);
 
-        setWindowStyle(false);
+        if (Build.VERSION.SDK_INT >= 19) {
+            Window window = getWindow();
+            if (window != null) {
+                int flags = View.SYSTEM_UI_FLAG_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.INVISIBLE;
+                window.getDecorView().setSystemUiVisibility(flags);
+                window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                window.clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                SDLActivity.mFullscreenModeActive = true;
+            }
+        }
 
         getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(this);
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                new android.window.OnBackInvokedCallback() {
+                    @Override
+                    public void onBackInvoked() {
+                        SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_ESCAPE);
+                        SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_ESCAPE);
+                    }
+                }
+            );
+        }
 
         // Get filename from "Open with" of another application
         Intent intent = getIntent();
@@ -483,21 +518,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     public void onBackPressed() {
-        // Check if we want to block the back button in case of mouse right click.
-        //
-        // If we do, the normal hardware back button will no longer work and people have to use home,
-        // but the mouse right click will work.
-        //
-        boolean trapBack = SDLActivity.nativeGetHintBoolean("SDL_ANDROID_TRAP_BACK_BUTTON", false);
-        if (trapBack) {
-            // Exit and let the mouse handler handle this button (if appropriate)
-            return;
-        }
-
-        // Default system back button behavior.
-        if (!isFinishing()) {
-            super.onBackPressed();
-        }
+        SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_ESCAPE);
+        SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_ESCAPE);
     }
 
     // Called by JNI from SDL.

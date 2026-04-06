@@ -116,6 +116,7 @@ fun SettingsNavGraph(
 
                 composable(Screen.EngineSettings.route) {
                     EngineSettingsScreen(
+                        mainNavController = mainNavController,
                         navController = settingsNavController,
                         transition = this.transition
                     )

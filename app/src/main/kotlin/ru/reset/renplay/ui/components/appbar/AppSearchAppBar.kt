@@ -28,16 +28,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import ru.reset.renplay.ui.components.feedback.LocalAppBlurState
+import ru.reset.renplay.ui.components.feedback.appBlurEffect
+import ru.reset.renplay.ui.components.feedback.rememberAppBlurState
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -94,31 +100,53 @@ fun AppSearchAppBar(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        
+        val blurActive = LocalAppBlurState.current.blurEnabled
+        val globalBlurState = LocalAppBlurState.current
+        val containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f)
+
+        val customShape = remember(widthFraction.value) {
+            object : Shape {
+                override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+                    val w = size.width * widthFraction.value
+                    if (w <= 0f) return Outline.Rectangle(androidx.compose.ui.geometry.Rect.Zero)
+
+                    val isLtr = layoutDirection == LayoutDirection.Ltr
+                    val left = if (isLtr) size.width - w else 0f
+                    val right = if (isLtr) size.width else w
+
+                    return Outline.Rounded(
+                        RoundRect(
+                            left = left,
+                            top = 0f,
+                            right = right,
+                            bottom = size.height,
+                            cornerRadius = CornerRadius(size.height / 2f)
+                        )
+                    )
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .appBlurEffect(
+                    state = globalBlurState,
+                    shape = customShape,
+                    blurRadius = 16.dp,
+                    tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                    forceInvalidation = true
+                )
                 .graphicsLayer {
                     clip = true
-                    shape = object : Shape {
-                        override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-                            val w = size.width * widthFraction.value
-                            if (w <= 0f) return Outline.Rectangle(androidx.compose.ui.geometry.Rect.Zero)
-                            val left = (size.width - w) / 2f
-                            return Outline.Rounded(
-                                RoundRect(
-                                    left = left,
-                                    top = 0f,
-                                    right = left + w,
-                                    bottom = size.height,
-                                    cornerRadius = CornerRadius(size.height / 2f)
-                                )
-                            )
-                        }
-                    }
+                    shape = customShape
                 }
                 .background(containerColor)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                )
         ) {
             Row(
                 modifier = Modifier

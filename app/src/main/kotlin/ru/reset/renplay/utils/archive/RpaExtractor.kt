@@ -23,7 +23,7 @@ object RpaExtractor {
 
                 if (header.startsWith("RPA-3.0 ") || header.startsWith("RPA-3.2 ")) {
                     version = 3
-                    val parts = header.substring(8).trim().split(Regex("\\s+"))
+                    val parts = header.substring(8).trim().split(' ').filter { it.isNotEmpty() }
                     if (parts.isNotEmpty()) {
                         offset = parts[0].toLong(16)
                         for (i in 1 until parts.size) {
@@ -32,7 +32,7 @@ object RpaExtractor {
                     } else return null
                 } else if (header.startsWith("RPA-2.0 ")) {
                     version = 2
-                    val parts = header.substring(8).trim().split(Regex("\\s+"))
+                    val parts = header.substring(8).trim().split(' ').filter { it.isNotEmpty() }
                     if (parts.isNotEmpty()) {
                         offset = parts[0].toLong(16)
                     } else return null

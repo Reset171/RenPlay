@@ -13,7 +13,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppScaffold(
@@ -30,7 +34,7 @@ fun AppScaffold(
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = topBar,
+
         bottomBar = bottomBar,
         snackbarHost = snackbarHost,
         floatingActionButton = floatingActionButton,
@@ -45,6 +49,42 @@ fun AppScaffold(
                 .background(containerColor)
         ) {
             content(paddingValues)
+
+            Box(
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(paddingValues.calculateTopPadding() + 16.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                containerColor,
+                                containerColor.copy(alpha = 0.65f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(paddingValues.calculateBottomPadding() + 16.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                containerColor.copy(alpha = 0.65f),
+                                containerColor
+                            )
+                        )
+                    )
+            )
+
+            Box(modifier = Modifier.align(androidx.compose.ui.Alignment.TopCenter)) {
+                topBar()
+            }
         }
     }
 }

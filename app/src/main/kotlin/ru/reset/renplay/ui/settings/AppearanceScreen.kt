@@ -10,6 +10,7 @@ import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Transition
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,6 +41,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.shape.CircleShape
+import ru.reset.renplay.ui.components.feedback.LocalAppBlurState
+import ru.reset.renplay.ui.components.feedback.rememberAppBlurState
+import ru.reset.renplay.ui.components.feedback.appBlurEffect
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import ru.reset.renplay.R
@@ -97,12 +107,32 @@ fun AppearanceScreen(
     val useGameDetailsScreen by settingsViewModel.useGameDetailsScreen.collectAsState()
     val advancedAnimationsEnabled by settingsViewModel.advancedAnimationsEnabled.collectAsState()
 
-    AppScaffold(
-        topBar = {
+    val scrollState = rememberScrollState()
+    val scrollProgress by remember { derivedStateOf { (scrollState.value / 80f).coerceIn(0f, 1f) } }
+    val blurActive = LocalAppBlurState.current.blurEnabled
+    val screenBlurState = rememberAppBlurState()
+    screenBlurState.blurEnabled = blurActive
+    val buttonBgColor = if (blurActive) Color.Transparent else androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), scrollProgress)
+
+    CompositionLocalProvider(LocalAppBlurState provides screenBlurState) {
+        AppScaffold(
+            topBar = {
             RenPlayAppBar(
                 title = stringResource(R.string.nav_appearance),
+                scrollProgress = scrollProgress,
                 navigationIcon = {
-                    AppIconButton(onClick = { navController.navigateUp() }) {
+                    AppIconButton(
+                        onClick = { navController.navigateUp() },
+                        backgroundColor = buttonBgColor,
+                        shape = CircleShape,
+                        modifier = Modifier.appBlurEffect(
+                            state = screenBlurState,
+                            shape = CircleShape,
+                            blurRadius = 16.dp * scrollProgress,
+                            tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f * scrollProgress),
+                            forceInvalidation = true
+                        )
+                    ) {
                         AppIcon(painterResource(R.drawable.ic_arrow_back), null)
                     }
                 },
@@ -114,10 +144,13 @@ fun AppearanceScreen(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
+                .fillMaxSize()
+                .appBlurSource(screenBlurState)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
+            Spacer(Modifier.height(paddingValues.calculateTopPadding() + 56.dp))
 
             SettingsGroup(title = stringResource(R.string.group_ui_style)) {
                 SettingsItem(
@@ -161,19 +194,20 @@ fun AppearanceScreen(
                 showDivider = true
             )
 
-            SettingsItem(
-                title = stringResource(R.string.item_enable_blur),
-                description = if (ru.reset.renplay.utils.isBlurSupported(context)) stringResource(R.string.blur_supported) else stringResource(R.string.blur_unsupported),
-                icon = painterResource(id = R.drawable.ic_blur_circular),
-                onClick = { onEnableBlurChange(!enableBlur) },
-                trailingContent = {
-                    AppSwitch(
-                        checked = enableBlur,
-                        onCheckedChange = onEnableBlurChange
-                    )
-                },
-                showDivider = true
-            )
+            if (ru.reset.renplay.utils.isBlurSupported(context)) {
+                SettingsItem(
+                    title = stringResource(R.string.item_enable_blur),
+                    icon = painterResource(id = R.drawable.ic_blur_circular),
+                    onClick = { onEnableBlurChange(!enableBlur) },
+                    trailingContent = {
+                        AppSwitch(
+                            checked = enableBlur,
+                            onCheckedChange = onEnableBlurChange
+                        )
+                    },
+                    showDivider = true
+                )
+            }
 
             SettingsItem(
                 title = stringResource(R.string.setting_advanced_animations),
@@ -203,6 +237,7 @@ fun AppearanceScreen(
                 showDivider = false
             )
         }
+        Spacer(Modifier.height(paddingValues.calculateBottomPadding() + 24.dp))
     }
     }
 
@@ -281,6 +316,7 @@ fun AppearanceScreen(
                     )
                 }
             }
+        }
         }
     }
 }

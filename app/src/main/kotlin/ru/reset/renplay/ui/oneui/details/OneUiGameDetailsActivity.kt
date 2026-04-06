@@ -47,18 +47,13 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, AppViewModelProvider.Factory)[LibraryViewModel::class.java]
         
         val projectId = intent.getStringExtra("projectId") ?: return
-        val project = viewModel.projectsList.value.find { it.id == projectId }
-
-        if (project == null) {
-            finish()
-            return
-        }
-
-        val iconPath = project.customIconPath ?: project.iconPath
-        setupBackgroundBlur(project.path, iconPath)
 
         val toolbar = findViewById<ToolbarLayout>(R.id.toolbar_layout)
         toolbar.setNavigationButtonOnClickListener { onBackPressedDispatcher.onBackPressed() }
+
+        findViewById<dev.oneuiproject.oneui.widget.CardItemView>(R.id.card_action_edit)?.setOnClickListener {
+            ru.reset.renplay.ui.oneui.library.EditGameBottomSheet.newInstance(projectId).show(supportFragmentManager, null)
+        }
 
         val ivIcon = findViewById<ImageView>(R.id.iv_game_icon)
         ivIcon.outlineProvider = object : ViewOutlineProvider() {
@@ -68,82 +63,140 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
         }
         ivIcon.clipToOutline = true
 
-        findViewById<TextView>(R.id.tv_game_title).text = project.name
-        
-        val versionText = findViewById<TextView>(R.id.tv_game_version)
-        if (project.version.isNotEmpty()) {
-            versionText.text = getString(R.string.version_prefix, project.version)
-            versionText.visibility = View.VISIBLE
-        } else {
-            versionText.visibility = View.GONE
-        }
-
-        findViewById<Button>(R.id.btn_play).setOnClickListener {
-            val gameFolder = File(project.path, "game")
-            if (!gameFolder.exists() || !gameFolder.isDirectory) {
-                Toast.makeText(this, getString(R.string.error_no_game_folder), Toast.LENGTH_LONG).show()
-            } else {
-                val launchIntent = Intent(this, org.renpy.android.PythonSDLActivity::class.java).apply {
-                    putExtra("GAME_PATH", project.path)
+        lifecycleScope.launch {
+            viewModel.projectsList.collect { projects ->
+                val project = projects.find { it.id == projectId }
+                if (project == null) {
+                    finish()
+                    return@collect
                 }
-                startActivity(launchIntent)
-            }
-        }
 
-        val playtime = viewModel.getPlaytimeStats(project.path)
-        findViewById<CardItemView>(R.id.card_stat_total).summary = formatPlaytime(playtime.totalMillis)
-        findViewById<CardItemView>(R.id.card_stat_today).summary = formatPlaytime(playtime.todayMillis)
+                val iconPath = project.customIconPath ?: project.iconPath
+                setupBackgroundBlur(project.path, iconPath)
 
-        findViewById<CardItemView>(R.id.card_action_shortcut).setOnClickListener {
-            if (ShortcutManagerCompat.isRequestPinShortcutSupported(this)) {
-                val launchIntent = Intent(this, ru.reset.renplay.MainActivity::class.java).apply {
-                    action = "ru.reset.renplay.LAUNCH_GAME"
-                    putExtra("GAME_PATH", project.path)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                }
-                val iconPathToLoad = project.customIconPath ?: project.iconPath
-                val shortcutBitmap = iconPathToLoad?.let { BitmapFactory.decodeFile(it) }
-                val icon = if (shortcutBitmap != null) {
-                    val scaled = Bitmap.createScaledBitmap(shortcutBitmap, 192, 192, true)
-                    IconCompat.createWithBitmap(scaled)
+                findViewById<TextView>(R.id.tv_game_title).text = project.name
+
+                val versionText = findViewById<TextView>(R.id.tv_game_version)
+                if (project.version.isNotEmpty()) {
+                    versionText.text = getString(R.string.version_prefix, project.version)
+                    versionText.visibility = View.VISIBLE
                 } else {
-                    IconCompat.createWithResource(this, R.mipmap.ic_launcher)
+                    versionText.visibility = View.GONE
                 }
-                val shortcutInfo = ShortcutInfoCompat.Builder(this, "game_${project.id}")
-                    .setShortLabel(project.name)
-                    .setIntent(launchIntent)
-                    .setIcon(icon)
-                    .build()
-                ShortcutManagerCompat.requestPinShortcut(this, shortcutInfo, null)
-            }
-        }
 
-        findViewById<CardItemView>(R.id.card_action_logs).setOnClickListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime"))
-                    val lines = process.inputStream.bufferedReader().readLines().takeLast(300)
-                    val sb = StringBuilder()
-                    lines.forEach { line ->
-                        if (line.contains("python") || line.contains("SDL") || line.contains("System.err") || line.contains("FATAL") || line.contains("AndroidRuntime")) {
-                            sb.append(line).append("\n")
+                findViewById<Button>(R.id.btn_play).setOnClickListener {
+                    val gameFolder = File(project.path, "game")
+                    if (!gameFolder.exists() || !gameFolder.isDirectory) {
+                        Toast.makeText(this@OneUiGameDetailsActivity, getString(R.string.error_no_game_folder), Toast.LENGTH_LONG).show()
+                    } else {
+                        val engine = viewModel.engineManager.getEngine(project.engineVersion)
+                        if (engine != null) {
+                            val launchIntent = Intent(this@OneUiGameDetailsActivity, org.renpy.android.PythonSDLActivity::class.java).apply {
+                                putExtra("GAME_PATH", project.path)
+                                putExtra("GAME_NAME", project.name)
+                                putExtra("ENGINE_PATH", engine.dirPath)
+                                putExtra("ENGINE_VERSION", engine.version)
+                                putExtra("ENGINE_ZIP", engine.zipPath)
+                                putExtra("ENGINE_LIB", engine.dirPath + "/lib")
+                            }
+                            startActivity(launchIntent)
                         }
                     }
-                    val result = if (sb.isEmpty()) getString(R.string.logs_not_found) else sb.toString()
-                    withContext(Dispatchers.Main) {
-                        OneUiTextBottomSheet(getString(R.string.logs_dialog_title), result, true).show(supportFragmentManager, null)
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        OneUiTextBottomSheet(getString(R.string.logs_dialog_title), getString(R.string.logs_read_error, e.message), true).show(supportFragmentManager, null)
+                }
+
+                val playtime = viewModel.getPlaytimeStats(project.path)
+                findViewById<CardItemView>(R.id.card_stat_total).summary = formatPlaytime(playtime.totalMillis)
+                findViewById<CardItemView>(R.id.card_stat_today).summary = formatPlaytime(playtime.todayMillis)
+
+                val actualEngine = viewModel.engineManager.getEngine(project.engineVersion)
+                val tvEngine = findViewById<CardItemView>(R.id.card_action_engine)
+                if (actualEngine != null) {
+                    tvEngine.summary = getString(R.string.engine_version_format, actualEngine.version)
+                } else {
+                    tvEngine.summary = getString(R.string.engine_not_installed)
+                }
+
+                tvEngine.setOnClickListener {
+                    val engines = viewModel.engineManager.getInstalledEngines()
+                    if (engines.isEmpty()) return@setOnClickListener
+
+                    val names = engines.map { getString(R.string.engine_version_format, it.version) }.toTypedArray()
+                    val checkedItem = engines.indexOfFirst { it.version == actualEngine?.version }.takeIf { it >= 0 } ?: 0
+
+                    androidx.appcompat.app.AlertDialog.Builder(this@OneUiGameDetailsActivity)
+                        .setTitle(R.string.engine_version_title)
+                        .setSingleChoiceItems(names, checkedItem) { dialog, which ->
+                            val selected = engines[which]
+                            viewModel.updateProject(project.copy(engineVersion = selected.version))
+                            dialog.dismiss()
+                        }
+                        .show()
+                }
+
+                findViewById<CardItemView>(R.id.card_action_shortcut).setOnClickListener {
+                    if (ShortcutManagerCompat.isRequestPinShortcutSupported(this@OneUiGameDetailsActivity)) {
+                        val engine = viewModel.engineManager.getEngine(project.engineVersion) ?: return@setOnClickListener
+                        val launchIntent = Intent(this@OneUiGameDetailsActivity, ru.reset.renplay.MainActivity::class.java).apply {
+                            action = "ru.reset.renplay.LAUNCH_GAME"
+                            putExtra("GAME_PATH", project.path)
+                            putExtra("GAME_NAME", project.name)
+                            putExtra("ENGINE_PATH", engine.dirPath)
+                            putExtra("ENGINE_VERSION", engine.version)
+                            putExtra("ENGINE_ZIP", engine.zipPath)
+                            putExtra("ENGINE_LIB", engine.dirPath + "/lib")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                        val iconPathToLoad = project.customIconPath ?: project.iconPath
+                        val shortcutBitmap = iconPathToLoad?.let { BitmapFactory.decodeFile(it) }
+                        val icon = if (shortcutBitmap != null) {
+                            val scaled = Bitmap.createScaledBitmap(shortcutBitmap, 192, 192, true)
+                            IconCompat.createWithBitmap(scaled)
+                        } else {
+                            IconCompat.createWithResource(this@OneUiGameDetailsActivity, R.mipmap.ic_launcher)
+                        }
+                        val shortcutInfo = ShortcutInfoCompat.Builder(this@OneUiGameDetailsActivity, "game_${project.id}")
+                            .setShortLabel(project.name)
+                            .setIntent(launchIntent)
+                            .setIcon(icon)
+                            .build()
+                        ShortcutManagerCompat.requestPinShortcut(this@OneUiGameDetailsActivity, shortcutInfo, null)
                     }
                 }
-            }
-        }
 
-        findViewById<CardItemView>(R.id.card_action_delete).setOnClickListener {
-            viewModel.removeProject(project)
-            finish()
+                findViewById<CardItemView>(R.id.card_action_logs).setOnClickListener {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val sb = StringBuilder()
+                            val logFile = File(project.path, "log.txt")
+                            val tracebackFile = File(project.path, "traceback.txt")
+
+                            if (tracebackFile.exists()) {
+                                sb.append("--- traceback.txt ---\n")
+                                sb.append(tracebackFile.readText())
+                                sb.append("\n\n")
+                            }
+                            if (logFile.exists()) {
+                                sb.append("--- log.txt ---\n")
+                                sb.append(logFile.readText())
+                            }
+
+                            val result = if (sb.isEmpty()) getString(R.string.logs_not_found) else sb.toString()
+                            withContext(Dispatchers.Main) {
+                                OneUiTextBottomSheet(getString(R.string.logs_dialog_title), result, true).show(supportFragmentManager, null)
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                OneUiTextBottomSheet(getString(R.string.logs_dialog_title), getString(R.string.logs_read_error, e.message), true).show(supportFragmentManager, null)
+                            }
+                        }
+                    }
+                }
+
+                findViewById<CardItemView>(R.id.card_action_delete).setOnClickListener {
+                    viewModel.removeProject(project)
+                    finish()
+                }
+            }
         }
     }
 
@@ -157,6 +210,8 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
     private fun setupBackgroundBlur(projectPath: String, iconPath: String?) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val enableBlur = prefs.getBoolean("enable_blur", true)
+        val project = viewModel.projectsList.value.find { it.id == intent.getStringExtra("projectId") }
+        val customBg = project?.customBackgroundPath
 
         val dimView = findViewById<View>(R.id.v_background_dim)
         val ivBackground = findViewById<ImageView>(R.id.iv_background_blur)
@@ -171,7 +226,17 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             val gameIconBitmap = iconPath?.let { BitmapFactory.decodeFile(it) }
-            var bgBitmap = if (enableBlur) extractGameBackground(projectPath) else null
+            var bgBitmap: Bitmap? = null
+            if (enableBlur) {
+                if (customBg != null) {
+                    bgBitmap = ru.reset.renplay.utils.GameAssetExtractor.loadBitmap(customBg, 600, 400)
+                } else {
+                    val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(this@OneUiGameDetailsActivity, projectPath)
+                    if (assets.backgroundPath != null) {
+                        bgBitmap = ru.reset.renplay.utils.GameAssetExtractor.loadBitmap(assets.backgroundPath, 600, 400)
+                    }
+                }
+            }
 
             if (enableBlur && bgBitmap == null) {
                 val canvasSize = 400
@@ -215,7 +280,9 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
 
                 if (enableBlur && bgBitmap != null) {
                     androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+                    @Suppress("DEPRECATION")
                     window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    @Suppress("DEPRECATION")
                     window.navigationBarColor = android.graphics.Color.TRANSPARENT
                     window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
 
@@ -247,7 +314,7 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
                         }
                     }
 
-                    arrayOf(R.id.container_header, R.id.container_stats, R.id.container_actions).forEach { id ->
+                    arrayOf(R.id.container_header, R.id.container_stats, R.id.container_engine, R.id.container_actions).forEach { id ->
                         findViewById<View>(id)?.apply {
                             setBackgroundColor(translucentCardColor)
                             clipToOutline = true
@@ -274,33 +341,11 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
 
                     findViewById<View>(R.id.container_header)?.setBackgroundColor(cardBgColor)
                     findViewById<View>(R.id.container_stats)?.setBackgroundColor(cardBgColor)
+                    findViewById<View>(R.id.container_engine)?.setBackgroundColor(cardBgColor)
                     findViewById<View>(R.id.container_actions)?.setBackgroundColor(cardBgColor)
                 }
             }
         }
     }
 
-    private fun extractGameBackground(path: String): Bitmap? {
-        val gameDir = File(path, "game")
-        val guiDir = File(gameDir, "gui")
-        val exts = listOf("png", "jpg", "jpeg", "webp")
-        for (ext in exts) {
-            val f = File(guiDir, "main_menu.$ext")
-            if (f.exists()) {
-                val opts = BitmapFactory.Options().apply { inSampleSize = 2 }
-                return BitmapFactory.decodeFile(f.absolutePath, opts)
-            }
-        }
-        val rpaFiles = gameDir.listFiles { _, name -> name.endsWith(".rpa", true) } ?: emptyArray()
-        for (rpa in rpaFiles) {
-            for (ext in exts) {
-                val bytes = RpaExtractor.extractSingleFileBytes(rpa, "gui/main_menu.$ext")
-                if (bytes != null) {
-                    val opts = BitmapFactory.Options().apply { inSampleSize = 2 }
-                    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
-                }
-            }
-        }
-        return null
-    }
 }

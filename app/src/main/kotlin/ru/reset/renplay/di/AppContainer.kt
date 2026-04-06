@@ -12,5 +12,9 @@ class AppContainer(private val context: Context) {
 
     val cacheDir: File
         get() = context.cacheDir
+
+    val engineManager: ru.reset.renplay.domain.EngineManager by lazy {
+        ru.reset.renplay.domain.EngineManager(context)
+    }
 }
 

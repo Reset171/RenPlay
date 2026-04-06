@@ -22,7 +22,7 @@
         app:showNavButtonAsBack="true"
         app:expandable="true"
         app:expanded="false"
-        app:title=" "
+        app:title="@string/swipe_action_details"
         app:mainRoundedCorners="none"
         android:background="@android:color/transparent">
 
@@ -124,6 +124,31 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@android:color/transparent"
+                    android:text="@string/game_details_launch_params" />
+
+                <dev.oneuiproject.oneui.widget.RoundedLinearLayout
+                    android:id="@+id/container_engine"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:colorBackground"
+                    android:orientation="vertical"
+                    app:roundedCorners="all">
+
+                    <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_action_engine"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/engine_version_renpy"
+                        app:icon="@drawable/ic_memory"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="false" />
+
+                </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
+
+                <dev.oneuiproject.oneui.widget.Separator
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
                     android:text="@string/label_tool" />
 
                 <dev.oneuiproject.oneui.widget.RoundedLinearLayout
@@ -155,6 +180,16 @@
                         app:showBottomDivider="true" />
                         
                     <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_action_edit"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/game_details_edit"
+                        app:summary="@string/game_details_edit_desc"
+                        app:icon="@drawable/ic_format_paint"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="true" />
+
+                    <dev.oneuiproject.oneui.widget.CardItemView
                         android:id="@+id/card_action_delete"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -163,7 +198,7 @@
                         app:icon="@drawable/ic_oui_delete_outline"
                         app:showTopDivider="false"
                         app:showBottomDivider="false" />
-                        
+
                 </dev.oneuiproject.oneui.widget.RoundedLinearLayout>
 
                 <Space

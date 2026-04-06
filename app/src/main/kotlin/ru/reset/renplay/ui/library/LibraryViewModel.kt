@@ -30,7 +30,7 @@ data class PlaytimeStats(
     val todayMillis: Long
 )
 
-class LibraryViewModel(application: Application, private val prefs: SharedPreferences) : AndroidViewModel(application) {
+class LibraryViewModel(application: Application, private val prefs: SharedPreferences, val engineManager: ru.reset.renplay.domain.EngineManager) : AndroidViewModel(application) {
 
     private val _projectsList = MutableStateFlow<List<Project>>(emptyList())
     val projectsList = _projectsList.asStateFlow()
@@ -104,28 +104,12 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
         }
     }
 
-    fun addProject(name: String, version: String, path: String, customIconPath: String?, application: Application) {
+    fun addProject(name: String, version: String, path: String, customIconPath: String?, engineVersion: String?, application: Application) {
         viewModelScope.launch(Dispatchers.IO) {
             var autoIconPath: String? = null
             if (customIconPath == null) {
-                val iconFile = File(path, "game/gui/window_icon.png")
-                if (iconFile.exists()) {
-                    autoIconPath = iconFile.absolutePath
-                } else {
-                    val iconCacheDir = File(application.cacheDir, "project_icons")
-                    if (!iconCacheDir.exists()) iconCacheDir.mkdirs()
-                    val cachedIconFile = File(iconCacheDir, "${path.hashCode()}_icon.png")
-                    val gameDir = File(path, "game")
-                    val rpaFiles = gameDir.listFiles { _, n -> n.endsWith(".rpa", ignoreCase = true) } ?: emptyArray()
-                    for (rpa in rpaFiles) {
-                        val bytes = ru.reset.renplay.utils.archive.RpaExtractor.extractSingleFileBytes(rpa, "gui/window_icon.png")
-                        if (bytes != null) {
-                            cachedIconFile.writeBytes(bytes)
-                            autoIconPath = cachedIconFile.absolutePath
-                            break
-                        }
-                    }
-                }
+                val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(application, path)
+                autoIconPath = assets.iconPath
             }
 
             val project = Project(
@@ -134,7 +118,8 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
                 path = path,
                 version = version,
                 iconPath = autoIconPath,
-                customIconPath = customIconPath
+                customIconPath = customIconPath,
+                engineVersion = engineVersion
             )
 
             val newList = _projectsList.value.toMutableList().apply { add(project) }

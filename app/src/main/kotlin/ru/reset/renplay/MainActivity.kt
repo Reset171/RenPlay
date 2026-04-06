@@ -38,6 +38,7 @@ import java.util.Locale
 import androidx.navigation.fragment.NavHostFragment
 
 import ru.reset.renplay.ui.components.feedback.LocalAppBlurState
+import ru.reset.renplay.ui.components.feedback.appBlurSource
 import ru.reset.renplay.ui.components.feedback.rememberAppBlurState
 import ru.reset.renplay.ui.navigation.AppNavGraph
 
@@ -50,6 +51,11 @@ class MainActivity : AppCompatActivity() {
             if (gamePath != null) {
                 val gameIntent = Intent(this, org.renpy.android.PythonSDLActivity::class.java).apply {
                     putExtra("GAME_PATH", gamePath)
+                    putExtra("GAME_NAME", intent.getStringExtra("GAME_NAME"))
+                    putExtra("ENGINE_PATH", intent.getStringExtra("ENGINE_PATH"))
+                    putExtra("ENGINE_VERSION", intent.getStringExtra("ENGINE_VERSION"))
+                    putExtra("ENGINE_ZIP", intent.getStringExtra("ENGINE_ZIP"))
+                    putExtra("ENGINE_LIB", intent.getStringExtra("ENGINE_LIB"))
                 }
                 startActivity(gameIntent)
                 finish()
@@ -187,25 +193,37 @@ fun MainScreen(
     val appBlurState = rememberAppBlurState()
     appBlurState.blurEnabled = enableBlur
 
-    CompositionLocalProvider(LocalAppBlurState provides appBlurState) {
+    val appToastState = remember { ru.reset.renplay.ui.components.feedback.AppToastState() }
+
+    CompositionLocalProvider(
+        LocalAppBlurState provides appBlurState,
+        ru.reset.renplay.ui.components.feedback.LocalAppToast provides appToastState
+    ) {
         Surface(
             modifier = Modifier.fillMaxSize()
         ) {
             if (!hasFilePermission) {
                 PermissionRequestUI { requestPermission(context, filePermissionLauncher) }
             } else {
-                AppNavGraph( 
-                    uiStyle = uiStyle,
-                    onUiStyleChange = onUiStyleChange,
-                    useDynamicTheme = useDynamicTheme,
-                    onDynamicThemeChange = onDynamicThemeChange,
-                    themeOption = themeOption,
-                    onThemeOptionChange = onThemeOptionChange,
-                    appLanguage = appLanguage,
-                    onAppLanguageChange = onAppLanguageChange,
-                    enableBlur = enableBlur,
-                    onEnableBlurChange = onEnableBlurChange
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().appBlurSource(appBlurState)) {
+                        AppNavGraph( 
+                            uiStyle = uiStyle,
+                            onUiStyleChange = onUiStyleChange,
+                            useDynamicTheme = useDynamicTheme,
+                            onDynamicThemeChange = onDynamicThemeChange,
+                            themeOption = themeOption,
+                            onThemeOptionChange = onThemeOptionChange,
+                            appLanguage = appLanguage,
+                            onAppLanguageChange = onAppLanguageChange,
+                            enableBlur = enableBlur,
+                            onEnableBlurChange = onEnableBlurChange
+                        )
+                    }
+                    Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                        ru.reset.renplay.ui.components.feedback.AppToastHost(appToastState)
+                    }
+                }
             }
         }
     }

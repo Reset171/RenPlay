@@ -53,4 +53,8 @@
             android:summary="@string/engine_force_recompile_desc" />
     </PreferenceCategory>
 
+    <PreferenceCategory
+        android:key="category_engine_management"
+        android:title="@string/engine_management_title" />
+
 </PreferenceScreen>

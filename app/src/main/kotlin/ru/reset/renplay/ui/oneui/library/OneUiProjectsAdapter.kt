@@ -68,7 +68,9 @@ class OneUiProjectsAdapter(
                     }
                 }
                 itemView.clipToOutline = true
-                searchHighlighter.highlightColor = android.graphics.Color.WHITE
+                val typedValue = android.util.TypedValue()
+                itemView.context.theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)
+                searchHighlighter.highlightColor = typedValue.data
             } else {
                 itemView.outlineProvider = object : ViewOutlineProvider() {
                     override fun getOutline(view: View, outline: android.graphics.Outline) {

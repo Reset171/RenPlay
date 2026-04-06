@@ -16,7 +16,7 @@
     <string name="nav_about">О программе</string>
     <string name="nav_settings">Настройки</string>
     <string name="nav_engine_settings">Настройки Ren\'Py</string>
-    <string name="setting_use_game_details">Экран деталей игры</string>
+    <string name="setting_use_game_details">Экран «Об игре»</string>
     <string name="setting_use_game_details_desc">Показывать подробную информацию об игре перед запуском</string>
 
     <string name="group_language">Язык</string>
@@ -52,7 +52,7 @@
     <string name="playtime_format_min">%1$d мин</string>
     <string name="logs_not_found">Логов Ren\'Py не найдено в буфере.</string>
     <string name="logs_read_error">Ошибка чтения логов: %1$s</string>
-    <string name="logs_dialog_title">Логи движка</string>
+    <string name="logs_dialog_title">Логи</string>
     <string name="logs_copy_button">СКОПИРОВАТЬ В БУФЕР</string>
     <string name="logs_copied_toast">Скопировано</string>
     <string name="engine_model_rendering">Рендеринг на основе моделей</string>
@@ -70,10 +70,12 @@
     <string name="group_development">Разработчик</string>
     <string name="author_name">Reset171</string>
 
-    <string name="picker_title">Выбор папки</string>
+    <string name="picker_title">Выбор игры</string>
     <string name="picker_select_btn">ВЫБРАТЬ ЭТУ ПАПКУ</string>
     <string name="picker_empty">Папка пуста</string>
     <string name="picker_access_denied">Нет доступа</string>
+    <string name="picker_title_zip">Выбор архива</string>
+    <string name="picker_title_image">Выбор изображения</string>
 
     <string name="main_empty_project_title">Проект не выбран</string>
     <string name="main_empty_project_desc">Добавьте директорию с визуальными новеллами</string>
@@ -89,7 +91,7 @@
     <string name="game_details_shortcut">Создать ярлык</string>
     <string name="game_details_shortcut_desc">Добавить на главный экран</string>
     <string name="game_details_logs">Смотреть логи</string>
-    <string name="game_details_logs_desc">Отладка и ошибки движка</string>
+    <string name="game_details_logs_desc">Отладка и ошибки Ren\'Py</string>
     <string name="game_details_delete">Удалить из библиотеки</string>
     <string name="game_details_delete_desc">Файлы игры останутся на устройстве</string>
     <string name="label_tool">Управление</string>
@@ -100,15 +102,49 @@
     <string name="library_empty_search">Ничего не найдено</string>
 
     <string name="action_view_type">Вид</string>
-    <string name="swipe_action_details">Детали</string>
+    <string name="swipe_action_details">Об игре</string>
     <string name="group_ui_style">Стиль интерфейса</string>
     <string name="ui_style_material">Material You</string>
     <string name="ui_style_oneui">OneUI</string>
     <string name="dialog_ui_style_title">Стиль приложения</string>
     <string name="pref_category_ui">Интерфейс</string>
-    <string name="pref_category_engine">Движок Ren\'Py</string>
+    <string name="pref_category_engine">Настройки Ren\'Py</string>
     <string name="pref_system_theme">Системная тема</string>
     <string name="pref_ui_style">Стиль приложения</string>
     <string name="clip_crash_logs">Логи ошибок</string>
     <string name="clip_logs">Логи</string>
+
+    <string name="loading_game_title">Игра запускается, ожидайте...</string>
+    <string name="loading_game_name">Проект: %1$s</string>
+    <string name="loading_engine_version">Версия: Ren\'Py %1$s</string>
+
+    <string name="engine_not_installed">Версия не установлена</string>
+    <string name="engine_not_installed_toast">Версия не установлена!</string>
+    <string name="engine_version_title">Выбор версии</string>
+    <string name="engine_version_renpy">Версия Ren\'Py</string>
+    <string name="engine_version_dialog_title">Выбор версии Ren\'Py</string>
+    <string name="engine_installed">Установлена</string>
+    <string name="engine_installed_click_to_delete">Установлена (нажмите для удаления)</string>
+    <string name="engine_delete_title">Удаление</string>
+    <string name="engine_delete_confirm">Удалить версию Ren\'Py %1$s?</string>
+    <string name="engine_delete_btn">Удалить</string>
+    <string name="engine_cancel_btn">Отмена</string>
+    <string name="engine_install_zip">Установить из ZIP</string>
+    <string name="engine_install_zip_desc">Выберите архив плагина</string>
+    <string name="engine_auto_selected">Автоматически выбрана %1$s</string>
+    <string name="engine_bound_to">Привязана к версии %1$s</string>
+    <string name="engine_select_prompt">Выбрать...</string>
+    <string name="engine_version_format">Ren\'Py %1$s</string>
+
+    <string name="game_delete_confirm_title">Удаление из библиотеки</string>
+    <string name="game_delete_confirm_desc">Проект \"%1$s\" исчезнет из списка, но его файлы останутся на устройстве.</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="game_details_launch_params">Параметры запуска</string>
+    <string name="game_details_edit">Изменить</string>
+    <string name="game_details_edit_desc">Изменить название, иконку и фон</string>
+    <string name="edit_game_title">Редактирование</string>
+    <string name="edit_game_save">СОХРАНИТЬ</string>
+    <string name="btn_choose_bg">ВЫБРАТЬ ФОН</string>
+    <string name="engine_management_title">Управление версиями Ren\'Py</string>
 </resources>

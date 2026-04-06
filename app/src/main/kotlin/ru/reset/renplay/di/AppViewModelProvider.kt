@@ -14,18 +14,20 @@ object AppViewModelProvider {
         initializer {
             LibraryViewModel(
                 renPlayApplication(),
-                renPlayApplication().container.sharedPreferences
+                renPlayApplication().container.sharedPreferences,
+                renPlayApplication().container.engineManager
             )
         }
 
         initializer {
             SettingsViewModel(
-                renPlayApplication().container.sharedPreferences
+                renPlayApplication().container.sharedPreferences,
+                renPlayApplication().container.engineManager
             )
         }
 
         initializer {
-            FolderPickerViewModel()
+            FolderPickerViewModel(renPlayApplication())
         }
     }
 }

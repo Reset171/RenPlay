@@ -1,5 +1,6 @@
 package ru.reset.renplay.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -9,8 +10,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.animateColorAsState
+import ru.reset.renplay.ui.components.feedback.LocalAppBlurState
+import ru.reset.renplay.ui.components.feedback.rememberAppBlurState
+import ru.reset.renplay.ui.components.feedback.appBlurEffect
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -40,12 +53,32 @@ fun SettingsListScreen(
     val transitionState = LocalSettingsTransition.current
     val listFontSize = MaterialTheme.typography.bodyLarge.fontSize
 
-    AppScaffold(
-        topBar = {
+    val scrollState = rememberScrollState()
+    val scrollProgress by remember { derivedStateOf { (scrollState.value / 80f).coerceIn(0f, 1f) } }
+    val blurActive = LocalAppBlurState.current.blurEnabled
+    val screenBlurState = rememberAppBlurState()
+    screenBlurState.blurEnabled = blurActive
+    val buttonBgColor = if (blurActive) Color.Transparent else androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), scrollProgress)
+
+    CompositionLocalProvider(LocalAppBlurState provides screenBlurState) {
+        AppScaffold(
+            topBar = {
             RenPlayAppBar(
                 title = stringResource(R.string.nav_settings),
+                scrollProgress = scrollProgress,
                 navigationIcon = {
-                    AppIconButton(onClick = { mainNavController.navigateUp() }) {
+                    AppIconButton(
+                        onClick = { mainNavController.navigateUp() },
+                        backgroundColor = buttonBgColor,
+                        shape = CircleShape,
+                        modifier = Modifier.appBlurEffect(
+                            state = screenBlurState,
+                            shape = CircleShape,
+                            blurRadius = 16.dp * scrollProgress,
+                            tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f * scrollProgress),
+                            forceInvalidation = true
+                        )
+                    ) {
                         AppIcon(painterResource(R.drawable.ic_arrow_back), null)
                     }
                 }
@@ -54,10 +87,13 @@ fun SettingsListScreen(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
+                .fillMaxSize()
+                .appBlurSource(screenBlurState)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
+            Spacer(Modifier.height(paddingValues.calculateTopPadding() + 56.dp))
             SettingsGroup {
                 val appearanceTitle = stringResource(R.string.nav_appearance)
                 SettingsItem(
@@ -114,6 +150,8 @@ fun SettingsListScreen(
                     } else Modifier
                 )
             }
+            Spacer(Modifier.height(paddingValues.calculateBottomPadding() + 24.dp))
+        }
         }
     }
 }

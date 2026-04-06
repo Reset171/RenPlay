@@ -1,6 +1,5 @@
 package ru.reset.renplay.ui.components.appbar
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -9,32 +8,31 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RenPlayAppBar(
     title: String,
+    scrollProgress: Float = 0f,
     navigationIcon: @Composable (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
-    scrollBehavior: TopAppBarScrollBehavior? = null,
     modifier: Modifier = Modifier,
-    titleModifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.background
+    titleModifier: Modifier = Modifier
 ) {
+    val titleAlpha = 1f - scrollProgress
+    val titleOffsetY = (-20).dp * scrollProgress
+
     Row(
         modifier = modifier
-            .background(containerColor)
             .statusBarsPadding()
             .fillMaxWidth()
             .height(56.dp)
@@ -54,13 +52,15 @@ fun RenPlayAppBar(
             text = title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = titleAlpha),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = if (navigationIcon != null) 2.dp else 24.dp)
                 .then(titleModifier)
+                .offset(y = titleOffsetY)
+                .graphicsLayer { alpha = titleAlpha }
         )
 
         Row(

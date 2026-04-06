@@ -41,19 +41,12 @@ class AddGameBottomSheet : SemBottomSheetDialogFragment(R.layout.oneui_bottomshe
     private var ivIconPreview: ImageView? = null
     private lateinit var libraryViewModel: LibraryViewModel
 
-    private val iconPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    val cachedFile = File(requireContext().cacheDir, "custom_icon_${System.currentTimeMillis()}.png")
-                    requireContext().contentResolver.openInputStream(uri)?.use { input ->
-                        cachedFile.outputStream().use { output -> input.copyTo(output) }
-                    }
-                    withContext(Dispatchers.Main) {
-                        customIconPath = cachedFile.absolutePath
-                        ivIconPreview?.setImageBitmap(BitmapFactory.decodeFile(customIconPath))
-                    }
-                } catch (e: Exception) {}
+    private val iconPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val path = result.data?.getStringExtra("selectedPath")
+            if (path != null) {
+                customIconPath = path
+                ivIconPreview?.setImageBitmap(BitmapFactory.decodeFile(customIconPath))
             }
         }
     }
@@ -69,45 +62,29 @@ class AddGameBottomSheet : SemBottomSheetDialogFragment(R.layout.oneui_bottomshe
         ivIconPreview = view.findViewById<ImageView>(R.id.iv_icon_preview)
 
         view.findViewById<Button>(R.id.btn_pick_icon).setOnClickListener {
-            iconPickerLauncher.launch("image/*")
+            val intent = android.content.Intent(requireContext(), ru.reset.renplay.ui.oneui.picker.OneUiFolderPickerActivity::class.java).apply {
+                putExtra("mode", "image")
+            }
+            iconPickerLauncher.launch(intent)
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
-            var parsedName = File(gamePath).name
-            var parsedVersion = "1.0"
-            var parsedIcon: String? = null
+            val meta = ru.reset.renplay.utils.RenpyProjectParser.parse(gamePath)
 
-            val optionsFile = File(gamePath, "game/options.rpy")
-            if (optionsFile.exists()) {
-                try {
-                    optionsFile.forEachLine { line ->
-                        val trimmed = line.trim()
-                        if (trimmed.startsWith("define config.name")) {
-                            val firstQuote = trimmed.indexOfAny(charArrayOf('"', '\''))
-                            val lastQuote = trimmed.lastIndexOfAny(charArrayOf('"', '\''))
-                            if (firstQuote != -1 && lastQuote != -1 && firstQuote < lastQuote) {
-                                parsedName = trimmed.substring(firstQuote + 1, lastQuote)
-                            }
-                        } else if (trimmed.startsWith("define config.version")) {
-                            val firstQuote = trimmed.indexOfAny(charArrayOf('"', '\''))
-                            val lastQuote = trimmed.lastIndexOfAny(charArrayOf('"', '\''))
-                            if (firstQuote != -1 && lastQuote != -1 && firstQuote < lastQuote) {
-                                parsedVersion = trimmed.substring(firstQuote + 1, lastQuote)
-                            }
-                        } else if (trimmed.startsWith("define config.window_icon")) {
-                            val firstQuote = trimmed.indexOfAny(charArrayOf('"', '\''))
-                            val lastQuote = trimmed.lastIndexOfAny(charArrayOf('"', '\''))
-                            if (firstQuote != -1 && lastQuote != -1 && firstQuote < lastQuote) {
-                                val iconRelPath = trimmed.substring(firstQuote + 1, lastQuote)
-                                val iconFile = File(gamePath, "game/$iconRelPath")
-                                if (iconFile.exists()) {
-                                    parsedIcon = iconFile.absolutePath
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Exception) {}
+            val parsedName = meta.name ?: File(gamePath).name
+            val parsedVersion = meta.version ?: "1.0"
+
+            val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(requireContext(), gamePath)
+            var parsedIcon = assets.iconPath
+
+            if (parsedIcon == null && meta.iconRelPath != null) {
+                val iconFile = File(gamePath, "game/" + meta.iconRelPath)
+                if (iconFile.exists()) {
+                    parsedIcon = iconFile.absolutePath
+                }
             }
+
+            val autoEngine = libraryViewModel.engineManager.getEngine(meta.scriptVersion)
 
             withContext(Dispatchers.Main) {
                 etName.setText(parsedName)
@@ -116,17 +93,47 @@ class AddGameBottomSheet : SemBottomSheetDialogFragment(R.layout.oneui_bottomshe
                     customIconPath = parsedIcon
                     ivIconPreview?.setImageBitmap(BitmapFactory.decodeFile(customIconPath))
                 }
+
+                val btnEngine = view.findViewById<Button>(R.id.btn_select_engine)
+                btnEngine.tag = autoEngine?.version
+                if (autoEngine != null) {
+                    btnEngine.text = getString(R.string.engine_version_format, autoEngine.version)
+                } else {
+                    btnEngine.text = getString(R.string.engine_not_installed)
+                }
             }
+        }
+
+        val btnEngine = view.findViewById<Button>(R.id.btn_select_engine)
+        btnEngine.setOnClickListener {
+            val engines = libraryViewModel.engineManager.getInstalledEngines()
+            if (engines.isEmpty()) return@setOnClickListener
+
+            val names = engines.map { getString(R.string.engine_version_format, it.version) }.toTypedArray()
+            val currentVersion = btnEngine.tag as? String
+            val checkedItem = engines.indexOfFirst { it.version == currentVersion }.takeIf { it >= 0 } ?: 0
+
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.engine_version_title)
+                .setSingleChoiceItems(names, checkedItem) { dialog, which ->
+                    val selected = engines[which]
+                    btnEngine.text = getString(R.string.engine_version_format, selected.version)
+                    btnEngine.tag = selected.version
+                    dialog.dismiss()
+                }
+                .show()
         }
 
         view.findViewById<Button>(R.id.btn_add_game).setOnClickListener {
             val name = etName.text.toString().trim()
             if (name.isNotEmpty()) {
+                val engineVersion = btnEngine.tag as? String
                 libraryViewModel.addProject(
                     name = name,
                     version = etVersion.text.toString().trim(),
                     path = gamePath,
                     customIconPath = customIconPath,
+                    engineVersion = engineVersion,
                     application = requireContext().applicationContext as Application
                 )
                 dismiss()

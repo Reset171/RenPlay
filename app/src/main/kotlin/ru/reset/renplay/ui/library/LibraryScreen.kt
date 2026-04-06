@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloat
@@ -86,6 +87,8 @@ fun LibraryScreen(
     val viewModel: LibraryViewModel = viewModel(viewModelStoreOwner = activity, factory = AppViewModelProvider.Factory)
     val settingsViewModel: SettingsViewModel = viewModel(viewModelStoreOwner = activity, factory = AppViewModelProvider.Factory)
 
+    val appToast = ru.reset.renplay.ui.components.feedback.LocalAppToast.current
+
     val useGameDetailsScreen by settingsViewModel.useGameDetailsScreen.collectAsState()
     val advancedAnimationsEnabled by settingsViewModel.advancedAnimationsEnabled.collectAsState()
 
@@ -104,6 +107,10 @@ fun LibraryScreen(
     var newGameName by remember { mutableStateOf("") }
     var newGameVersion by remember { mutableStateOf("") }
     var newGameCustomIcon by remember { mutableStateOf<String?>(null) }
+
+    val availableEngines = remember { viewModel.engineManager.getInstalledEngines() }
+    var selectedEngine by remember { mutableStateOf(availableEngines.firstOrNull()?.version) }
+    var showEngineSelectorDialog by remember { mutableStateOf(false) }
 
     var activeProjectId by remember { mutableStateOf<String?>(null) }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -125,186 +132,98 @@ fun LibraryScreen(
             } else {
                 val gameSubFolder = File(project.path, "game")
                 if (!gameSubFolder.exists() || !gameSubFolder.isDirectory) {
-                    Toast.makeText(context, context.getString(R.string.error_no_game_folder), Toast.LENGTH_LONG).show()
+                    appToast.show(context.getString(R.string.error_no_game_folder), R.drawable.ic_info)
                 } else {
-                    val intent = Intent(context, PythonSDLActivity::class.java).apply {
-                        putExtra("GAME_PATH", project.path)
-                    }
-                    context.startActivity(intent)
-                }
-            }
-        }
-    }
-
-    val iconPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            coroutineScope.launch(Dispatchers.IO) {
-                try {
-                    val cachedFile = File(context.cacheDir, "custom_icon_${System.currentTimeMillis()}.png")
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        cachedFile.outputStream().use { output ->
-                            input.copyTo(output)
+                    val engine = viewModel.engineManager.getEngine(project.engineVersion)
+                    if (engine != null) {
+                        val intent = Intent(context, PythonSDLActivity::class.java).apply {
+                            putExtra("GAME_PATH", project.path)
+                            putExtra("GAME_NAME", project.name)
+                            putExtra("ENGINE_PATH", engine.dirPath)
+                            putExtra("ENGINE_VERSION", engine.version)
+                            putExtra("ENGINE_ZIP", engine.zipPath)
+                            putExtra("ENGINE_LIB", engine.dirPath + "/lib")
                         }
+                        context.startActivity(intent)
+                    } else {
+                        appToast.show(context.getString(R.string.engine_not_installed_toast), R.drawable.ic_info)
                     }
-                    withContext(Dispatchers.Main) {
-                        newGameCustomIcon = cachedFile.absolutePath
-                    }
-                } catch (e: Exception) {
                 }
             }
         }
     }
 
     val currentBackStackEntry = navController.currentBackStackEntry
+
+    val iconReturnedPath by currentBackStackEntry?.savedStateHandle?.getStateFlow("custom_icon", "")?.collectAsState(initial = "") ?: remember { mutableStateOf("") }
+    LaunchedEffect(iconReturnedPath) {
+        if (iconReturnedPath.isNotEmpty()) {
+            newGameCustomIcon = iconReturnedPath
+            currentBackStackEntry?.savedStateHandle?.remove<String>("custom_icon")
+        }
+    }
     val returnedPath by currentBackStackEntry?.savedStateHandle?.getStateFlow("base_path", "")?.collectAsState(initial = "") ?: remember { mutableStateOf("") }
 
     LaunchedEffect(returnedPath) {
         if (returnedPath.isNotEmpty()) {
             newGamePath = returnedPath
-            var parsedName = File(returnedPath).name
-            var parsedVersion = "1.0"
-            var parsedIcon: String? = null
-            
             withContext(Dispatchers.IO) {
-                val optionsFile = File(returnedPath, "game/options.rpy")
-                if (optionsFile.exists()) {
-                    try {
-                        optionsFile.forEachLine { line ->
-                            val trimmed = line.trim()
-                            if (trimmed.startsWith("define config.name")) {
-                                val firstQuote = trimmed.indexOfAny(charArrayOf('"', '\''))
-                                val lastQuote = trimmed.lastIndexOfAny(charArrayOf('"', '\''))
-                                if (firstQuote != -1 && lastQuote != -1 && firstQuote < lastQuote) {
-                                    parsedName = trimmed.substring(firstQuote + 1, lastQuote)
-                                }
-                            } else if (trimmed.startsWith("define config.version")) {
-                                val firstQuote = trimmed.indexOfAny(charArrayOf('"', '\''))
-                                val lastQuote = trimmed.lastIndexOfAny(charArrayOf('"', '\''))
-                                if (firstQuote != -1 && lastQuote != -1 && firstQuote < lastQuote) {
-                                    parsedVersion = trimmed.substring(firstQuote + 1, lastQuote)
-                                }
-                            } else if (trimmed.startsWith("define config.window_icon")) {
-                                val firstQuote = trimmed.indexOfAny(charArrayOf('"', '\''))
-                                val lastQuote = trimmed.lastIndexOfAny(charArrayOf('"', '\''))
-                                if (firstQuote != -1 && lastQuote != -1 && firstQuote < lastQuote) {
-                                    val iconRelPath = trimmed.substring(firstQuote + 1, lastQuote)
-                                    val iconFile = File(returnedPath, "game/$iconRelPath")
-                                    if (iconFile.exists()) {
-                                        parsedIcon = iconFile.absolutePath
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
+                val meta = ru.reset.renplay.utils.RenpyProjectParser.parse(returnedPath)
+                val parsedName = meta.name ?: File(returnedPath).name
+                val parsedVersion = meta.version ?: "1.0"
+
+                val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(context, returnedPath)
+                var parsedIcon = assets.iconPath
+
+                if (parsedIcon == null && meta.iconRelPath != null) {
+                    val iconFile = File(returnedPath, "game/" + meta.iconRelPath)
+                    if (iconFile.exists()) {
+                        parsedIcon = iconFile.absolutePath
                     }
                 }
+
+                val autoEngine = viewModel.engineManager.getEngine(meta.scriptVersion)
+
+                withContext(Dispatchers.Main) {
+                    selectedEngine = autoEngine?.version
+                    newGameName = parsedName
+                    newGameVersion = parsedVersion
+                    newGameCustomIcon = parsedIcon
+                    showAddGamePanel = true
+                    currentBackStackEntry?.savedStateHandle?.remove<String>("base_path")
+                }
             }
-            
-            newGameName = parsedName
-            newGameVersion = parsedVersion
-            newGameCustomIcon = parsedIcon
-            showAddGamePanel = true
-            currentBackStackEntry?.savedStateHandle?.remove<String>("base_path")
         }
     }
 
-    AppScaffold(
-        topBar = {
-            Box {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.main_title),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(Modifier.weight(1f))
-                    
-                    AppIconButton(
-                        onClick = { isSearchActive = true },
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        size = 42.dp,
-                        iconSize = 20.dp
-                    ) {
-                        AppIcon(painterResource(R.drawable.ic_search), null)
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    AppIconButton(
-                        onClick = { showSortMenu = true },
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        size = 42.dp,
-                        iconSize = 20.dp
-                    ) {
-                        AppIcon(painterResource(R.drawable.ic_sort), null)
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    AppIconButton(
-                        onClick = { viewModel.toggleGridView() },
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        size = 42.dp,
-                        iconSize = 20.dp
-                    ) {
-                        androidx.compose.animation.AnimatedContent(
-                            targetState = isGridView,
-                            transitionSpec = {
-                                val springSpec = androidx.compose.animation.core.spring<Float>(
-                                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                                    stiffness = androidx.compose.animation.core.Spring.StiffnessLow
-                                )
-                                (androidx.compose.animation.scaleIn(initialScale = 0f, animationSpec = springSpec) + androidx.compose.animation.fadeIn()) togetherWith
-                                (androidx.compose.animation.scaleOut(targetScale = 0f, animationSpec = springSpec) + androidx.compose.animation.fadeOut())
-                            },
-                            label = "IconAnim"
-                        ) { grid ->
-                            AppIcon(painterResource(if (grid) R.drawable.ic_view_list else R.drawable.ic_grid_view), null)
-                        }
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    AppIconButton(
-                        onClick = { navController.navigate(Screen.Settings.route) },
-                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        size = 42.dp,
-                        iconSize = 20.dp
-                    ) {
-                        AppIcon(painterResource(R.drawable.ic_settings), null)
-                    }
-                }
-
-                AppSearchAppBar(
-                    query = searchQuery,
-                    onQueryChange = { viewModel.updateSearchQuery(it) },
-                    isActive = isSearchActive,
-                    onActiveChange = { 
-                        isSearchActive = it
-                        if (!it) viewModel.updateSearchQuery("")
-                    },
-                    placeholder = stringResource(R.string.library_search_hint)
-                )
-            }
-        },
-        floatingActionButton = {
-            AppButton(
-                onClick = { navController.navigate(Screen.FolderPicker.createRoute("base_path")) },
-                cornerRadius = 20.dp,
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                AppIcon(painterResource(R.drawable.ic_add), null)
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val scrollProgress by remember {
+        derivedStateOf {
+            if (gridState.firstVisibleItemIndex > 0) {
+                1f
+            } else {
+                (gridState.firstVisibleItemScrollOffset / 80f).coerceIn(0f, 1f)
             }
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+    }
+    val pillAlpha = scrollProgress
+    val titleAlpha = 1f - scrollProgress
+    val titleOffsetY = (-20).dp * scrollProgress
+    val buttonBgColor = androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), scrollProgress)
+
+    val blurActive = LocalAppBlurState.current.blurEnabled
+    val screenBlurState = rememberAppBlurState()
+    screenBlurState.blurEnabled = blurActive
+
+    CompositionLocalProvider(LocalAppBlurState provides screenBlurState) {
+        AppScaffold { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .appBlurSource(screenBlurState)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
             if (projectsList.isEmpty()) {
                 AppEmptyState(
                     icon = painterResource(R.drawable.ic_folder_open),
@@ -319,6 +238,8 @@ fun LibraryScreen(
             } else {
                 MorphingLibraryList(
                     projects = filteredProjects,
+                    gridState = gridState,
+                    topPadding = paddingValues.calculateTopPadding() + 80.dp,
                     iconCache = iconCache,
                     isGridView = isGridView,
                     sortOrder = sortOrder,
@@ -334,6 +255,140 @@ fun LibraryScreen(
                         navController.navigate(Screen.GameDetails.createRoute(project.id))
                     },
                     useGameDetailsScreen = useGameDetailsScreen
+                )
+            }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+            ) {
+                val normalUiAlpha by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isSearchActive) 0f else 1f, 
+                    label = "normalUiAlpha"
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .graphicsLayer { alpha = normalUiAlpha },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.main_title),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = titleAlpha),
+                        modifier = Modifier.offset(y = titleOffsetY).graphicsLayer { alpha = titleAlpha }
+                    )
+                    Spacer(Modifier.weight(1f))
+
+                    Surface(
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f * pillAlpha),
+                        modifier = Modifier
+                            .appBlurEffect(
+                                state = screenBlurState,
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                blurRadius = 16.dp * pillAlpha,
+                                tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f * pillAlpha),
+                                forceInvalidation = true
+                            )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 4.dp * scrollProgress, vertical = 4.dp * scrollProgress),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val leftShape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = 6.dp, bottomEnd = 6.dp)
+                            val middleShape = RoundedCornerShape(6.dp)
+                            val rightShape = RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp, topEnd = 24.dp, bottomEnd = 24.dp)
+
+                            AppIconButton(
+                                onClick = { isSearchActive = true },
+                                backgroundColor = buttonBgColor,
+                                size = 42.dp,
+                                iconSize = 20.dp,
+                                shape = leftShape
+                            ) {
+                                AppIcon(painterResource(R.drawable.ic_search), null)
+                            }
+
+                            Spacer(Modifier.width(2.dp))
+
+                            AppIconButton(
+                                onClick = { showSortMenu = true },
+                                backgroundColor = buttonBgColor,
+                                size = 42.dp,
+                                iconSize = 20.dp,
+                                shape = middleShape
+                            ) {
+                                AppIcon(painterResource(R.drawable.ic_sort), null)
+                            }
+
+                            Spacer(Modifier.width(2.dp))
+
+                            AppIconButton(
+                                onClick = { viewModel.toggleGridView() },
+                                backgroundColor = buttonBgColor,
+                                size = 42.dp,
+                                iconSize = 20.dp,
+                                shape = middleShape
+                            ) {
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = isGridView,
+                                    transitionSpec = {
+                                        val springSpec = androidx.compose.animation.core.spring<Float>(
+                                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                                        )
+                                        (androidx.compose.animation.scaleIn(initialScale = 0f, animationSpec = springSpec) + androidx.compose.animation.fadeIn()) togetherWith
+                                        (androidx.compose.animation.scaleOut(targetScale = 0f, animationSpec = springSpec) + androidx.compose.animation.fadeOut())
+                                    },
+                                    label = "IconAnim"
+                                ) { grid ->
+                                    AppIcon(painterResource(if (grid) R.drawable.ic_view_list else R.drawable.ic_grid_view), null)
+                                }
+                            }
+
+                            Spacer(Modifier.width(2.dp))
+
+                            AppIconButton(
+                                onClick = { navController.navigate(Screen.FolderPicker.createRoute("base_path")) },
+                                backgroundColor = buttonBgColor,
+                                size = 42.dp,
+                                iconSize = 20.dp,
+                                shape = middleShape
+                            ) {
+                                AppIcon(painterResource(R.drawable.ic_add), null)
+                            }
+
+                            Spacer(Modifier.width(2.dp))
+
+                            AppIconButton(
+                                onClick = { navController.navigate(Screen.Settings.route) },
+                                backgroundColor = buttonBgColor,
+                                size = 42.dp,
+                                iconSize = 20.dp,
+                                shape = rightShape
+                            ) {
+                                AppIcon(painterResource(R.drawable.ic_settings), null)
+                            }
+                        }
+                    }
+                }
+
+                AppSearchAppBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.updateSearchQuery(it) },
+                    isActive = isSearchActive,
+                    onActiveChange = { 
+                        isSearchActive = it
+                        if (!it) viewModel.updateSearchQuery("")
+                    },
+                    placeholder = stringResource(R.string.library_search_hint)
                 )
             }
         }
@@ -369,7 +424,7 @@ fun LibraryScreen(
                         onClick = {
                             viewModel.updateSortOrder(LibraryViewModel.SortOrder.MANUAL)
                             showSortMenu = false
-                            Toast.makeText(context, context.getString(R.string.sort_manual_hint), Toast.LENGTH_SHORT).show()
+                            appToast.show(context.getString(R.string.sort_manual_hint), R.drawable.ic_info)
                         },
                         showDivider = false
                     )
@@ -390,6 +445,7 @@ fun LibraryScreen(
                                 version = newGameVersion,
                                 path = newGamePath,
                                 customIconPath = newGameCustomIcon,
+                                engineVersion = selectedEngine,
                                 application = context.applicationContext as Application
                             )
                             dismiss()
@@ -433,7 +489,7 @@ fun LibraryScreen(
                         Spacer(Modifier.width(16.dp))
 
                         AppButton(
-                            onClick = { iconPickerLauncher.launch("image/*") },
+                            onClick = { navController.navigate(Screen.FolderPicker.createRoute("custom_icon", "image")) },
                             modifier = Modifier.weight(1f),
                             cornerRadius = 16.dp
                         ) {
@@ -447,6 +503,39 @@ fun LibraryScreen(
                 }
             }
         }
+
+        if (showEngineSelectorDialog) {
+            AppBottomPanel(
+                onDismissRequest = { showEngineSelectorDialog = false },
+                title = stringResource(R.string.engine_version_dialog_title),
+                icon = painterResource(R.drawable.ic_memory)
+            ) {
+                Column(modifier = Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    availableEngines.forEach { engine ->
+                        AppCard(
+                            onClick = {
+                                selectedEngine = engine.version
+                                showEngineSelectorDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = if (selectedEngine == engine.version) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            elevation = 0.dp,
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.engine_version_format, engine.version),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (selectedEngine == engine.version) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (selectedEngine == engine.version) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     }
 }
 
@@ -465,6 +554,7 @@ fun SeamlessGameCard(
     animatedVisibilityScope: AnimatedVisibilityScope,
     activeProjectId: String?,
     useGameDetailsScreen: Boolean,
+    searchQuery: String = "",
     isDragging: Boolean = false,
     onClick: () -> Unit,
     onInfoClick: () -> Unit
@@ -517,6 +607,7 @@ fun SeamlessGameCard(
             borderColor = borderColor,
             infoVerticalBias = infoVerticalBias, infoEndPadding = infoEndPadding, infoTopPadding = infoTopPadding,
             activeProjectId = activeProjectId, useGameDetailsScreen = useGameDetailsScreen,
+            searchQuery = searchQuery,
             onClick = onClick, onInfoClick = onInfoClick
         )
     } else {
@@ -544,6 +635,7 @@ fun SeamlessGameCard(
             infoTopPadding = if (isGridView) 8.dp else 0.dp,
             activeProjectId = activeProjectId,
             useGameDetailsScreen = useGameDetailsScreen,
+            searchQuery = searchQuery,
             onClick = onClick,
             onInfoClick = onInfoClick
         )
@@ -579,6 +671,7 @@ private fun GameCardContent(
     infoTopPadding: androidx.compose.ui.unit.Dp,
     activeProjectId: String?,
     useGameDetailsScreen: Boolean,
+    searchQuery: String = "",
     onClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
@@ -639,8 +732,26 @@ private fun GameCardContent(
                         .padding(start = textStartPadding, bottom = textBottomPadding, end = 16.dp)
                 ) {
                     with(sharedTransitionScope) {
-                        AppText(
-                            text = project.name,
+                        val primaryColor = MaterialTheme.colorScheme.primary
+                        val annotatedName = remember(project.name, searchQuery, primaryColor) {
+                            androidx.compose.ui.text.buildAnnotatedString {
+                                val str = project.name
+                                append(str)
+                                if (searchQuery.isNotBlank()) {
+                                    val index = str.indexOf(searchQuery, ignoreCase = true)
+                                    if (index >= 0) {
+                                        addStyle(
+                                            style = androidx.compose.ui.text.SpanStyle(color = primaryColor),
+                                            start = index,
+                                            end = index + searchQuery.length
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = annotatedName,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = titleColor,
@@ -677,12 +788,13 @@ private fun GameCardContent(
                 }
                 }
 
-                if (!useGameDetailsScreen) {
+                if (!useGameDetailsScreen && activeProjectId != project.id) {
                     AppIconButton(
                         onClick = onInfoClick,
                         modifier = Modifier
                             .align(androidx.compose.ui.BiasAlignment(1f, infoVerticalBias))
                             .padding(end = infoEndPadding, top = infoTopPadding)
+                            .zIndex(1f)
                             .appBlurEffect(
                                 state = cardBlurState,
                                 shape = androidx.compose.foundation.shape.CircleShape,
@@ -693,7 +805,8 @@ private fun GameCardContent(
                         backgroundColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
                         iconTint = titleColor,
                         size = 36.dp,
-                        iconSize = 20.dp
+                        iconSize = 20.dp,
+                        shape = androidx.compose.foundation.shape.CircleShape
                     ) {
                         AppIcon(painterResource(R.drawable.ic_info), null)
                     }

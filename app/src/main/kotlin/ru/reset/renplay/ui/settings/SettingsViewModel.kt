@@ -2,8 +2,12 @@ package ru.reset.renplay.ui.settings
 
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val KEY_DYNAMIC_THEME = "use_dynamic_theme"
 private const val KEY_THEME_OPTION = "theme_option"
@@ -25,7 +29,28 @@ enum class UiStyle {
     MATERIAL3, ONEUI
 }
 
-class SettingsViewModel(private val prefs: SharedPreferences) : ViewModel() {
+class SettingsViewModel(private val prefs: SharedPreferences, private val engineManager: ru.reset.renplay.domain.EngineManager) : ViewModel() {
+
+    val engines = kotlinx.coroutines.flow.MutableStateFlow<List<ru.reset.renplay.domain.models.EnginePlugin>>(emptyList())
+
+    fun loadEngines() {
+        engines.value = engineManager.getInstalledEngines()
+    }
+
+    fun installEngine(uri: android.net.Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            engineManager.installEngine(uri)
+            val list = engineManager.getInstalledEngines()
+            withContext(Dispatchers.Main) {
+                engines.value = list
+            }
+        }
+    }
+
+    fun deleteEngine(version: String) {
+        engineManager.deleteEngine(version)
+        loadEngines()
+    }
 
     private val _uiStyle = MutableStateFlow(
         try {

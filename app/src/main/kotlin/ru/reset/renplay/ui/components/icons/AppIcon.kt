@@ -52,6 +52,7 @@ fun AppIconButton(
     backgroundColor: Color = Color.Transparent,
     size: Dp = 48.dp,
     iconSize: Dp = 24.dp,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(14.dp),
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -87,8 +88,6 @@ fun AppIconButton(
         }
     }
 
-    val shape = RoundedCornerShape(14.dp)
-    
     val effectiveContentColor = if (enabled) {
         iconTint ?: LocalContentColor.current
     } else {

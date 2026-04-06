@@ -10,5 +10,7 @@ data class Project(
     val path: String = "",
     val version: String = "",
     val iconPath: String? = null,
-    val customIconPath: String? = null
+    val customIconPath: String? = null,
+    val customBackgroundPath: String? = null,
+    val engineVersion: String? = null
 )

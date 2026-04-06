@@ -76,7 +76,10 @@ class OneUiLibraryFragment : Fragment(R.layout.oneui_fragment_library) {
 
         fab.hideOnScroll(recyclerView)
         fab.setOnClickListener {
-            folderPickerLauncher.launch(Intent(requireContext(), OneUiFolderPickerActivity::class.java))
+            val intent = Intent(requireContext(), OneUiFolderPickerActivity::class.java).apply {
+                putExtra("mode", "game")
+            }
+            folderPickerLauncher.launch(intent)
         }
 
         adapter = OneUiProjectsAdapter(
@@ -90,10 +93,20 @@ class OneUiLibraryFragment : Fragment(R.layout.oneui_fragment_library) {
                     if (!gameFolder.exists() || !gameFolder.isDirectory) {
                         Toast.makeText(requireContext(), getString(R.string.error_no_game_folder), Toast.LENGTH_LONG).show()
                     } else {
-                        val intent = Intent(requireContext(), org.renpy.android.PythonSDLActivity::class.java).apply {
-                            putExtra("GAME_PATH", project.path)
+                        val engine = viewModel.engineManager.getEngine(project.engineVersion)
+                        if (engine != null) {
+                            val intent = Intent(requireContext(), org.renpy.android.PythonSDLActivity::class.java).apply {
+                                putExtra("GAME_PATH", project.path)
+                                putExtra("GAME_NAME", project.name)
+                                putExtra("ENGINE_PATH", engine.dirPath)
+                                putExtra("ENGINE_VERSION", engine.version)
+                                putExtra("ENGINE_ZIP", engine.zipPath)
+                                putExtra("ENGINE_LIB", engine.dirPath + "/lib")
+                            }
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(requireContext(), getString(R.string.engine_not_installed_toast), Toast.LENGTH_SHORT).show()
                         }
-                        startActivity(intent)
                     }
                 }
             },
@@ -125,10 +138,20 @@ class OneUiLibraryFragment : Fragment(R.layout.oneui_fragment_library) {
                     if (!gameFolder.exists() || !gameFolder.isDirectory) {
                         Toast.makeText(requireContext(), getString(R.string.error_no_game_folder), Toast.LENGTH_LONG).show()
                     } else {
-                        val intent = Intent(requireContext(), org.renpy.android.PythonSDLActivity::class.java).apply {
-                            putExtra("GAME_PATH", project.path)
+                        val engine = viewModel.engineManager.getEngine(project.engineVersion)
+                        if (engine != null) {
+                            val intent = Intent(requireContext(), org.renpy.android.PythonSDLActivity::class.java).apply {
+                                putExtra("GAME_PATH", project.path)
+                                putExtra("GAME_NAME", project.name)
+                                putExtra("ENGINE_PATH", engine.dirPath)
+                                putExtra("ENGINE_VERSION", engine.version)
+                                putExtra("ENGINE_ZIP", engine.zipPath)
+                                putExtra("ENGINE_LIB", engine.dirPath + "/lib")
+                            }
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(requireContext(), getString(R.string.engine_not_installed_toast), Toast.LENGTH_SHORT).show()
                         }
-                        startActivity(intent)
                     }
                 }
                 adapter.notifyItemChanged(position)

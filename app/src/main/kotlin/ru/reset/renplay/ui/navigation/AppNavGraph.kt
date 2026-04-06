@@ -22,7 +22,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ru.reset.renplay.ui.components.feedback.LocalAppBlurState
-import ru.reset.renplay.ui.components.feedback.appBlurSource
 import ru.reset.renplay.ui.picker.FolderPickerScreen
 import ru.reset.renplay.ui.details.GameDetailsScreen
 import ru.reset.renplay.ui.library.LibraryScreen
@@ -57,7 +56,7 @@ fun AppNavGraph(
             NavHost(
                 navController = navController,
                 startDestination = Screen.Library.route,
-                modifier = Modifier.appBlurSource(LocalAppBlurState.current),
+                modifier = Modifier,
                 enterTransition = {
                     slideInHorizontally(initialOffsetX = { it }, animationSpec = physicsSpecInt)
                 },
@@ -125,11 +124,13 @@ fun AppNavGraph(
                 composable(
                     route = Screen.FolderPicker.route,
                     arguments = listOf(
-                        navArgument("requestKey") { type = NavType.StringType }
+                        navArgument("requestKey") { type = NavType.StringType },
+                        navArgument("mode") { type = NavType.StringType }
                     )
                 ) { backStackEntry ->
                     val requestKey = backStackEntry.arguments?.getString("requestKey") ?: ""
-                    FolderPickerScreen(navController = navController, requestKey = requestKey)
+                    val mode = backStackEntry.arguments?.getString("mode") ?: "game"
+                    FolderPickerScreen(navController = navController, requestKey = requestKey, mode = mode)
                 }
             }
         }

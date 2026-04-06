@@ -23,27 +23,25 @@ import org.kamranzafar.jtar.*;
 
 class AssetExtract {
 
-    private AssetManager mAssetManager = null;
     private Activity mActivity = null;
 
     AssetExtract(Activity act) {
         mActivity = act;
-        mAssetManager = act.getAssets();
     }
 
-    public boolean extractTar(String asset, String target) {
+    public boolean extractTar(String archivePath, String target) {
 
         byte buf[] = new byte[1024 * 1024];
 
         InputStream assetStream = null;
         TarInputStream tis = null;
 
-        Log.i("python", "extracting " + asset + " to " + target);
-        
+        Log.i("python", "extracting " + archivePath + " to " + target);
+
         try {
-            assetStream = mAssetManager.open(asset, AssetManager.ACCESS_STREAMING);
+            assetStream = new FileInputStream(archivePath);
             tis = new TarInputStream(new BufferedInputStream(new GZIPInputStream(new BufferedInputStream(assetStream, 8192)), 8192));
-        } catch (IOException e) {
+        } catch (Exception e) {
             Log.e("python", "opening up extract tar", e);
             return false;
         }

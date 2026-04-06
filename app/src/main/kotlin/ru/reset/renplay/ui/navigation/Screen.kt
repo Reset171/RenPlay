@@ -18,9 +18,9 @@ sealed class Screen(val route: String) {
         }
     }
 
-    data object FolderPicker : Screen("folder_picker/{requestKey}") {
-        fun createRoute(requestKey: String): String {
-            return "folder_picker/$requestKey"
+    data object FolderPicker : Screen("folder_picker/{requestKey}/{mode}") {
+        fun createRoute(requestKey: String, mode: String = "game"): String {
+            return "folder_picker/$requestKey/$mode"
         }
     }
 }

@@ -30,6 +30,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -72,6 +73,11 @@ public class PythonSDLActivity extends SDLActivity {
     public StoreInterface mStore = null;
 
     public String mGamePath = "";
+    public String mGameName = "";
+    public String mEnginePath = "";
+    public String mEngineVersion = "";
+    public String mEngineZip = "";
+    public View mLoadingContainer = null;
     public long sessionStartTime = 0;
 
     ResourceManager resourceManager;
@@ -98,7 +104,7 @@ public class PythonSDLActivity extends SDLActivity {
         }
 
         try {
-            Class cls = Class.forName("org.renpy.iap.Store");
+            Class<?> cls = Class.forName("org.renpy.iap.Store");
             cls.getMethod("create", PythonSDLActivity.class).invoke(null, this);
         } catch (Exception e) {
             Log.e("PythonSDLActivity", "Failed to create store: " + e.toString());
@@ -150,63 +156,44 @@ public class PythonSDLActivity extends SDLActivity {
      * This determines if unpacking one the zip files included in
      * the .apk is necessary. If it is, the zip file is unpacked.
      */
-    public void unpackData(final String resource, File target) {
+    public void unpackData(final String archivePath, File target) {
 
-        /**
-         * Delete main.pyo unconditionally. This fixes a problem where we have
-         * a main.py newer than main.pyo, but start.c won't run it.
-         */
         new File(target, "main.pyo").delete();
 
         boolean shouldUnpack = false;
-
-        // The version of data in memory and on disk.
-        String data_version = "renplay_engine_v7_final";
+        String data_version = "extracted_" + archivePath.hashCode();
         String disk_version = null;
+        String disk_version_fn = target.getAbsolutePath() + "/.version";
 
-        String filesDir = target.getAbsolutePath();
-        String disk_version_fn = filesDir + "/" + resource + ".version";
-
-        // If no version, no unpacking is necessary.
-        if (data_version != null) {
-
-            try {
-                byte buf[] = new byte[64];
-                InputStream is = new FileInputStream(disk_version_fn);
-                int len = is.read(buf);
-                disk_version = new String(buf, 0, len);
-                is.close();
-            } catch (Exception e) {
-                disk_version = "";
-            }
-
-            if (! data_version.equals(disk_version)) {
-                shouldUnpack = true;
-            }
+        try {
+            byte buf[] = new byte[64];
+            InputStream is = new FileInputStream(disk_version_fn);
+            int len = is.read(buf);
+            disk_version = new String(buf, 0, len);
+            is.close();
+        } catch (Exception e) {
+            disk_version = "";
         }
 
+        if (!data_version.equals(disk_version)) {
+            shouldUnpack = true;
+        }
 
-        // If the disk data is out of date, extract it and write the
-        // version file.
         if (shouldUnpack) {
-            Log.v("python", "Extracting " + resource + " assets.");
+            Log.v("python", "Extracting " + archivePath + " assets.");
 
-            // Delete old libraries & renpy files.
             recursiveDelete(new File(target, "lib"));
             recursiveDelete(new File(target, "renpy"));
 
             target.mkdirs();
 
             AssetExtract ae = new AssetExtract(this);
-            if (!ae.extractTar(resource + ".mp3", target.getAbsolutePath())) {
-                toastError("Could not extract " + resource + " data.");
+            if (!ae.extractTar(archivePath, target.getAbsolutePath())) {
+                toastError("Could not extract " + archivePath + " data.");
             }
 
             try {
-                // Write .nomedia.
                 new File(target, ".nomedia").createNewFile();
-
-                // Write version file.
                 FileOutputStream os = new FileOutputStream(disk_version_fn);
                 os.write(data_version.getBytes());
                 os.close();
@@ -280,11 +267,10 @@ public class PythonSDLActivity extends SDLActivity {
             externalStorage = oldExternalStorage;
         }
 
-        unpackData("private", getFilesDir());
+        File privateDir = new File(mEnginePath, "private");
+        unpackData(mEnginePath + "/private.mp3", privateDir);
 
-        nativeSetEnv("ANDROID_PRIVATE", getFilesDir().getAbsolutePath());
-
-        nativeSetEnv("ANDROID_PRIVATE", getFilesDir().getAbsolutePath());
+        nativeSetEnv("ANDROID_PRIVATE", privateDir.getAbsolutePath());
 
         if (mGamePath != null && !mGamePath.isEmpty()) {
             nativeSetEnv("ANDROID_PUBLIC", mGamePath);
@@ -294,21 +280,7 @@ public class PythonSDLActivity extends SDLActivity {
         }
         nativeSetEnv("ANDROID_OLD_PUBLIC", oldExternalStorage.getAbsolutePath());
 
-        nativeSetEnv("ANDROID_OLD_PUBLIC", oldExternalStorage.getAbsolutePath());
-
-        // Figure out the APK path.
-        String apkFilePath;
-        ApplicationInfo appInfo;
-        PackageManager packMgmr = getApplication().getPackageManager();
-
-        try {
-            appInfo = packMgmr.getApplicationInfo(getPackageName(), 0);
-            apkFilePath = appInfo.sourceDir;
-        } catch (NameNotFoundException e) {
-            apkFilePath = "";
-        }
-
-        nativeSetEnv("ANDROID_APK", apkFilePath);
+        nativeSetEnv("ANDROID_APK", mEngineZip);
 
         if (!mAllPacksReady) {
             Log.i("python", "Waiting for all packs to become ready.");
@@ -349,11 +321,15 @@ public class PythonSDLActivity extends SDLActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.v("python", "onCreate()");
-        super.onCreate(savedInstanceState);
-
-        if (getIntent() != null && getIntent().hasExtra("GAME_PATH")) {
-            mGamePath = getIntent().getStringExtra("GAME_PATH");
+        if (getIntent() != null) {
+            if (getIntent().hasExtra("GAME_PATH")) mGamePath = getIntent().getStringExtra("GAME_PATH");
+            if (getIntent().hasExtra("GAME_NAME")) mGameName = getIntent().getStringExtra("GAME_NAME");
+            if (getIntent().hasExtra("ENGINE_PATH")) mEnginePath = getIntent().getStringExtra("ENGINE_PATH");
+            if (getIntent().hasExtra("ENGINE_VERSION")) mEngineVersion = getIntent().getStringExtra("ENGINE_VERSION");
+            if (getIntent().hasExtra("ENGINE_ZIP")) mEngineZip = getIntent().getStringExtra("ENGINE_ZIP");
+            if (getIntent().hasExtra("ENGINE_LIB")) SDLActivity.mEngineLibPath = getIntent().getStringExtra("ENGINE_LIB");
         }
+        super.onCreate(savedInstanceState);
 
         if (mLayout == null) {
             return;
@@ -400,6 +376,12 @@ public class PythonSDLActivity extends SDLActivity {
             mLayout.addView(mProgressBar, prlp);
         }
 
+        createLoadingCard();
+    }
+
+    private void createLoadingCard() {
+        mLoadingContainer = ru.reset.renplay.utils.LoadingOverlayHelper.createLoadingOverlay(this, mGameName, mEngineVersion, mGamePath);
+        mLayout.addView(mLoadingContainer, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     /**
@@ -409,9 +391,22 @@ public class PythonSDLActivity extends SDLActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (mActivity.mLoadingContainer != null) {
+                    mActivity.mLayout.removeView(mActivity.mLoadingContainer);
+                    ru.reset.renplay.utils.LoadingOverlayHelper.destroyLoadingOverlay(mActivity.mLoadingContainer);
+                    mActivity.mLoadingContainer = null;
+                }
+
                 if (mActivity.mPresplash != null) {
-                    mActivity.mLayout.removeView(mActivity.mPresplash);
-                    mActivity.mPresplash = null;
+                    mActivity.mPresplash.animate().alpha(0f).setDuration(350).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (mActivity.mPresplash != null) {
+                                mActivity.mLayout.removeView(mActivity.mPresplash);
+                                mActivity.mPresplash = null;
+                            }
+                        }
+                    }).start();
                 }
 
                 if (mActivity.mProgressBar != null) {

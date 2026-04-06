@@ -4,6 +4,7 @@ import android.content.pm.PackageInfo
 import androidx.annotation.RawRes
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Transition
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,11 +15,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.animation.animateColorAsState
+import ru.reset.renplay.ui.components.feedback.LocalAppBlurState
+import ru.reset.renplay.ui.components.feedback.rememberAppBlurState
+import ru.reset.renplay.ui.components.feedback.appBlurEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -84,15 +92,33 @@ fun AboutScreen(
 
     val uriHandler = LocalUriHandler.current
     val scrollState = rememberScrollState()
+    val scrollProgress by remember { derivedStateOf { (scrollState.value / 80f).coerceIn(0f, 1f) } }
+    val blurActive = LocalAppBlurState.current.blurEnabled
+    val screenBlurState = rememberAppBlurState()
+    screenBlurState.blurEnabled = blurActive
+    val buttonBgColor = if (blurActive) Color.Transparent else androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), scrollProgress)
 
     var showLicensesDialog by remember { mutableStateOf(false) }
 
-    AppScaffold(
-        topBar = {
+    CompositionLocalProvider(LocalAppBlurState provides screenBlurState) {
+        AppScaffold(
+            topBar = {
             RenPlayAppBar(
                 title = stringResource(R.string.nav_about),
+                scrollProgress = scrollProgress,
                 navigationIcon = {
-                    AppIconButton(onClick = { navController.navigateUp() }) {
+                    AppIconButton(
+                        onClick = { navController.navigateUp() },
+                        backgroundColor = buttonBgColor,
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        modifier = Modifier.appBlurEffect(
+                            state = screenBlurState,
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            blurRadius = 16.dp * scrollProgress,
+                            tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f * scrollProgress),
+                            forceInvalidation = true
+                        )
+                    ) {
                         AppIcon(painterResource(R.drawable.ic_arrow_back), null)
                     }
                 },
@@ -104,13 +130,14 @@ fun AboutScreen(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
+                .appBlurSource(screenBlurState)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(paddingValues.calculateTopPadding() + 56.dp + 40.dp))
 
             Image(
                 painter = painterResource(R.drawable.ic_launcher),
@@ -172,7 +199,7 @@ fun AboutScreen(
             }
 
             Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(paddingValues.calculateBottomPadding() + 24.dp))
         }
     }
 
@@ -280,6 +307,7 @@ fun AboutScreen(
                 }
             }
         }
+    }
     }
 }
 
