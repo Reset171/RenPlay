@@ -15,10 +15,6 @@ local.properties
 *.iml
 *.iws
 out/
-.acside/
-.rsttool/
-.rstignore
-RstTool_Exports/
 .DS_Store
 Thumbs.db
 *.apk
