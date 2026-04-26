@@ -70,6 +70,28 @@
     <string name="group_development">Разработчик</string>
     <string name="author_name">Reset171</string>
 
+    <string name="translation_settings_title">Офлайн перевод</string>
+    <string name="translation_settings_desc">Перевод текста в игре (Google ML Kit)</string>
+    <string name="trans_enable">Включить перевод</string>
+    <string name="trans_enable_desc">Переводить текст в игре</string>
+    <string name="trans_source_lang">Язык игры</string>
+    <string name="trans_target_lang">Язык перевода</string>
+    <string name="trans_manage_models">Языковые модели</string>
+    <string name="trans_models_downloaded">Скачаны и готовы к работе</string>
+    <string name="trans_models_not_downloaded">Не скачаны</string>
+    <string name="trans_models_downloading">Скачивание (ожидайте)...</string>
+    <string name="trans_btn_download">Скачать модели</string>
+    <string name="trans_btn_delete">Удалить модели</string>
+
+    <string name="lang_en">Английский</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_ja">Японский</string>
+    <string name="lang_zh">Китайский</string>
+    <string name="lang_ko">Корейский</string>
+    <string name="lang_es">Испанский</string>
+    <string name="lang_fr">Французский</string>
+    <string name="lang_de">Немецкий</string>
+
     <string name="picker_title">Выбор игры</string>
     <string name="picker_select_btn">ВЫБРАТЬ ЭТУ ПАПКУ</string>
     <string name="picker_empty">Папка пуста</string>

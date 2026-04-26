@@ -57,6 +57,7 @@ fun EngineSettingsScreen(
     val viewModel: SettingsViewModel = viewModel(viewModelStoreOwner = context as androidx.activity.ComponentActivity, factory = AppViewModelProvider.Factory)
 
     val advancedAnimationsEnabled by viewModel.advancedAnimationsEnabled.collectAsState()
+    val transitionState = LocalSettingsTransition.current
     val engines by viewModel.engines.collectAsState()
     var engineToDelete by remember { mutableStateOf<String?>(null) }
 

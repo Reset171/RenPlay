@@ -139,7 +139,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         app:title="@string/engine_version_renpy"
-                        app:icon="@drawable/ic_memory"
+                        app:icon="@drawable/ic_oui_plug_in_manager_outline"
                         app:showTopDivider="false"
                         app:showBottomDivider="false" />
 
@@ -185,7 +185,7 @@
                         android:layout_height="wrap_content"
                         app:title="@string/game_details_edit"
                         app:summary="@string/game_details_edit_desc"
-                        app:icon="@drawable/ic_format_paint"
+                        app:icon="@drawable/ic_oui_theme"
                         app:showTopDivider="false"
                         app:showBottomDivider="true" />
 

@@ -114,6 +114,24 @@ fun SettingsListScreen(
             }
 
             SettingsGroup {
+                val transTitle = stringResource(R.string.translation_settings_title)
+                SettingsItem(
+                    title = transTitle,
+                    description = null,
+                    icon = painterResource(id = R.drawable.ic_translate),
+                    onClick = { 
+                        if (advancedAnimationsEnabled) {
+                            transitionState.activeRoute = Screen.TranslationSettings.route
+                            transitionState.text = transTitle
+                        }
+                        navController.navigate(Screen.TranslationSettings.route) { launchSingleTop = true }
+                    },
+                    showDivider = true,
+                    titleModifier = if (advancedAnimationsEnabled) {
+                        Modifier.settingsTransitionSource(Screen.TranslationSettings.route, listFontSize)
+                    } else Modifier
+                )
+
                 val engineTitle = stringResource(R.string.nav_engine_settings)
                 SettingsItem(
                     title = engineTitle,

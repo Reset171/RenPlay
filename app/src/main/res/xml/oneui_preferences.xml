@@ -31,6 +31,21 @@
             android:title="@string/item_dynamic_colors" />
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="@string/translation_settings_title">
+        <SwitchPreferenceCompat
+            android:key="enable_translation"
+            android:title="@string/trans_enable"
+            android:summary="@string/trans_enable_desc" />
+
+        <Preference
+            android:key="trans_source"
+            android:title="@string/trans_source_lang" />
+
+        <Preference
+            android:key="trans_target"
+            android:title="@string/trans_target_lang" />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="@string/pref_category_engine">
         <SwitchPreferenceCompat
             android:key="hw_video"

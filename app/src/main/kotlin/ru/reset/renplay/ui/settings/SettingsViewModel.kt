@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -20,6 +23,7 @@ private const val KEY_HW_VIDEO = "hw_video"
 private const val KEY_PHONE_VARIANT = "phone_variant"
 private const val KEY_MODEL_RENDERING = "model_rendering"
 private const val KEY_FORCE_RECOMPILE = "force_recompile"
+private const val KEY_ENABLE_TRANSLATION = "enable_translation"
 
 enum class ThemeOption {
     SYSTEM, LIGHT, DARK, BLACK
@@ -28,6 +32,8 @@ enum class ThemeOption {
 enum class UiStyle {
     MATERIAL3, ONEUI
 }
+
+enum class TransModelState { NOT_DOWNLOADED, DOWNLOADING, DOWNLOADED }
 
 class SettingsViewModel(private val prefs: SharedPreferences, private val engineManager: ru.reset.renplay.domain.EngineManager) : ViewModel() {
 
@@ -151,5 +157,81 @@ class SettingsViewModel(private val prefs: SharedPreferences, private val engine
         _forceRecompileEnabled.value = enabled
         prefs.edit().putBoolean(KEY_FORCE_RECOMPILE, enabled).apply()
     }
+
+    private val _enableTranslation = MutableStateFlow(prefs.getBoolean(KEY_ENABLE_TRANSLATION, false))
+    val enableTranslation = _enableTranslation.asStateFlow()
+
+    fun onEnableTranslationChanged(enabled: Boolean) {
+        _enableTranslation.value = enabled
+        prefs.edit().putBoolean(KEY_ENABLE_TRANSLATION, enabled).apply()
+    }
+
+    private val _transSourceLang = MutableStateFlow(prefs.getString("trans_source", "en") ?: "en")
+    val transSourceLang = _transSourceLang.asStateFlow()
+
+    private val _transTargetLang = MutableStateFlow(prefs.getString("trans_target", "ru") ?: "ru")
+    val transTargetLang = _transTargetLang.asStateFlow()
+
+    private val _langModelStates = MutableStateFlow<Map<String, TransModelState>>(emptyMap())
+    val langModelStates = _langModelStates.asStateFlow()
+
+    val sourceModelState = combine(_transSourceLang, _langModelStates) { lang, states ->
+        states[lang] ?: TransModelState.NOT_DOWNLOADED
+    }.stateIn(viewModelScope, SharingStarted.Lazily, TransModelState.NOT_DOWNLOADED)
+
+    val targetModelState = combine(_transTargetLang, _langModelStates) { lang, states ->
+        states[lang] ?: TransModelState.NOT_DOWNLOADED
+    }.stateIn(viewModelScope, SharingStarted.Lazily, TransModelState.NOT_DOWNLOADED)
+
+    init {
+        checkTranslationModels()
+    }
+
+    fun onTransSourceLangChanged(lang: String) {
+        _transSourceLang.value = lang
+        prefs.edit().putString("trans_source", lang).apply()
+    }
+
+    fun onTransTargetLangChanged(lang: String) {
+        _transTargetLang.value = lang
+        prefs.edit().putString("trans_target", lang).apply()
+    }
+
+    fun checkTranslationModels() {
+        ru.reset.renplay.utils.RenPlayTranslator.getDownloadedTranslateModels { downloadedLangs ->
+            val currentStates = _langModelStates.value.toMutableMap()
+            val supportedLangs = listOf("en", "ru", "ja", "zh", "ko", "es", "fr", "de")
+            supportedLangs.forEach { lang ->
+                if (currentStates[lang] != TransModelState.DOWNLOADING) {
+                    currentStates[lang] = if (downloadedLangs.contains(lang)) TransModelState.DOWNLOADED else TransModelState.NOT_DOWNLOADED
+                }
+            }
+            _langModelStates.value = currentStates
+        }
+    }
+
+    fun downloadTranslationModel(lang: String) {
+        _langModelStates.value = _langModelStates.value.toMutableMap().apply { put(lang, TransModelState.DOWNLOADING) }
+        ru.reset.renplay.utils.RenPlayTranslator.downloadModel(
+            lang,
+            onSuccess = {
+                _langModelStates.value = _langModelStates.value.toMutableMap().apply { put(lang, TransModelState.DOWNLOADED) }
+            },
+            onError = {
+                _langModelStates.value = _langModelStates.value.toMutableMap().apply { put(lang, TransModelState.NOT_DOWNLOADED) }
+            }
+        )
+    }
+
+    fun deleteTranslationModel(lang: String) {
+        ru.reset.renplay.utils.RenPlayTranslator.deleteModel(lang) {
+            _langModelStates.value = _langModelStates.value.toMutableMap().apply { put(lang, TransModelState.NOT_DOWNLOADED) }
+        }
+    }
+
+    fun downloadSourceModel() = downloadTranslationModel(_transSourceLang.value)
+    fun downloadTargetModel() = downloadTranslationModel(_transTargetLang.value)
+    fun deleteSourceModel() = deleteTranslationModel(_transSourceLang.value)
+    fun deleteTargetModel() = deleteTranslationModel(_transTargetLang.value)
 }
 

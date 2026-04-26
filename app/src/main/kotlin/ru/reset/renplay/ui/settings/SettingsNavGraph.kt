@@ -121,6 +121,13 @@ fun SettingsNavGraph(
                         transition = this.transition
                     )
                 }
+
+                composable(Screen.TranslationSettings.route) {
+                    TranslationSettingsScreen(
+                        navController = settingsNavController,
+                        transition = this.transition
+                    )
+                }
             }
             SettingsTransitionOverlay()
         }

@@ -35,7 +35,7 @@
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
-    <string name="theme_black">AMOLED Black</string>
+    <string name="theme_black">Black</string>
 
     <string name="engine_hw_video">Hardware Acceleration</string>
     <string name="engine_hw_video_desc">Enable hardware acceleration for video playback.</string>
@@ -67,6 +67,28 @@
     <string name="licenses_title">Open Source Licenses</string>
     <string name="group_development">Developer</string>
     <string name="author_name">Reset171</string>
+
+    <string name="translation_settings_title">Offline Translation</string>
+    <string name="translation_settings_desc">In-game text translation (Google ML Kit)</string>
+    <string name="trans_enable">Enable translation</string>
+    <string name="trans_enable_desc">Translate in-game text</string>
+    <string name="trans_source_lang">Game Language</string>
+    <string name="trans_target_lang">Translation Language</string>
+    <string name="trans_manage_models">Language Models</string>
+    <string name="trans_models_downloaded">Downloaded and ready</string>
+    <string name="trans_models_not_downloaded">Not downloaded</string>
+    <string name="trans_models_downloading">Downloading (please wait)...</string>
+    <string name="trans_btn_download">Download Models</string>
+    <string name="trans_btn_delete">Delete Models</string>
+
+    <string name="lang_en">English</string>
+    <string name="lang_ru">Russian</string>
+    <string name="lang_ja">Japanese</string>
+    <string name="lang_zh">Chinese</string>
+    <string name="lang_ko">Korean</string>
+    <string name="lang_es">Spanish</string>
+    <string name="lang_fr">French</string>
+    <string name="lang_de">German</string>
 
     <string name="picker_title">Select Game</string>
     <string name="picker_select_btn">SELECT THIS FOLDER</string>

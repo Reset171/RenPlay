@@ -18,6 +18,7 @@ import ru.reset.renplay.ui.settings.SettingsViewModel
 import ru.reset.renplay.ui.settings.ThemeOption
 import ru.reset.renplay.ui.settings.UiStyle
 import ru.reset.renplay.utils.PREFS_NAME
+import ru.reset.renplay.utils.applyCrossWindowBlur
 
 class OneUiSettingsFragment : PreferenceFragmentCompat() {
 
@@ -83,6 +84,28 @@ class OneUiSettingsFragment : PreferenceFragmentCompat() {
             isVisible = false
         }
 
+        findPreference<SwitchPreferenceCompat>("enable_translation")?.apply {
+            isChecked = viewModel.enableTranslation.value
+            setOnPreferenceChangeListener { _, newValue ->
+                viewModel.onEnableTranslationChanged(newValue as Boolean)
+                true
+            }
+        }
+
+        findPreference<androidx.preference.Preference>("trans_source")?.apply {
+            setOnPreferenceClickListener {
+                showLanguageDialog(isSource = true)
+                true
+            }
+        }
+
+        findPreference<androidx.preference.Preference>("trans_target")?.apply {
+            setOnPreferenceClickListener {
+                showLanguageDialog(isSource = false)
+                true
+            }
+        }
+
         findPreference<SwitchPreferenceCompat>("hw_video")?.apply {
             isChecked = viewModel.hwVideoEnabled.value
             setOnPreferenceChangeListener { _, newValue ->
@@ -118,6 +141,116 @@ class OneUiSettingsFragment : PreferenceFragmentCompat() {
         viewModel.loadEngines()
     }
 
+    private fun showLanguageDialog(isSource: Boolean) {
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(0, 16, 0, 16)
+        }
+        val scrollView = androidx.core.widget.NestedScrollView(requireContext()).apply {
+            addView(container)
+        }
+
+        val langValues = resources.getStringArray(R.array.trans_lang_values)
+        val langNames = resources.getStringArray(R.array.trans_lang_entries)
+        val rowViews = mutableMapOf<String, android.view.View>()
+
+        val typedValue = android.util.TypedValue()
+        requireContext().theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimaryDark, typedValue, true)
+        val colorPrimary = typedValue.data
+        val colorError = android.graphics.Color.parseColor("#E75656")
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(if (isSource) R.string.trans_source_lang else R.string.trans_target_lang)
+            .setView(scrollView)
+            .setNegativeButton(dev.oneuiproject.oneui.design.R.string.oui_des_common_cancel, null)
+            .create()
+
+        for (i in langValues.indices) {
+            val code = langValues[i]
+            val name = langNames[i]
+            val row = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.oneui_item_language_row, container, false)
+            rowViews[code] = row
+
+            val tvTitle = row.findViewById<android.widget.TextView>(R.id.title)
+            val btnContainer = row.findViewById<android.widget.FrameLayout>(R.id.btn_action_container)
+            tvTitle.text = name
+
+            row.setOnClickListener {
+                if (isSource) viewModel.onTransSourceLangChanged(code)
+                else viewModel.onTransTargetLangChanged(code)
+                dialog.dismiss()
+            }
+
+            btnContainer.setOnClickListener {
+                val currentState = viewModel.langModelStates.value[code] ?: ru.reset.renplay.ui.settings.TransModelState.NOT_DOWNLOADED
+                when (currentState) {
+                    ru.reset.renplay.ui.settings.TransModelState.NOT_DOWNLOADED -> viewModel.downloadTranslationModel(code)
+                    ru.reset.renplay.ui.settings.TransModelState.DOWNLOADED -> viewModel.deleteTranslationModel(code)
+                    ru.reset.renplay.ui.settings.TransModelState.DOWNLOADING -> {}
+                }
+            }
+            container.addView(row)
+        }
+
+        val job = viewLifecycleOwner.lifecycleScope.launch {
+            launch {
+                val activeLangFlow = if (isSource) viewModel.transSourceLang else viewModel.transTargetLang
+                activeLangFlow.collectLatest { selectedLang ->
+                    langValues.forEach { code ->
+                        val row = rowViews[code]
+                        val radio = row?.findViewById<android.widget.RadioButton>(R.id.radio_button)
+                        val tvTitle = row?.findViewById<android.widget.TextView>(R.id.title)
+                        val isSelected = code == selectedLang
+                        radio?.isChecked = isSelected
+                        if (isSelected) {
+                            tvTitle?.typeface = dev.oneuiproject.oneui.utils.getSemiBoldFont()
+                        } else {
+                            tvTitle?.typeface = dev.oneuiproject.oneui.utils.getRegularFont()
+                        }
+                    }
+                }
+            }
+            launch {
+                viewModel.langModelStates.collectLatest { states ->
+                    langValues.forEach { code ->
+                        val row = rowViews[code]
+                        val btnAction = row?.findViewById<android.widget.ImageView>(R.id.btn_action)
+                        val progressBar = row?.findViewById<android.view.View>(R.id.progress_bar)
+                        val state = states[code] ?: ru.reset.renplay.ui.settings.TransModelState.NOT_DOWNLOADED
+
+                        when (state) {
+                            ru.reset.renplay.ui.settings.TransModelState.NOT_DOWNLOADED -> {
+                                btnAction?.visibility = android.view.View.VISIBLE
+                                progressBar?.visibility = android.view.View.GONE
+                                btnAction?.setImageResource(dev.oneuiproject.oneui.R.drawable.ic_oui_download)
+                                btnAction?.imageTintList = android.content.res.ColorStateList.valueOf(colorPrimary)
+                            }
+                            ru.reset.renplay.ui.settings.TransModelState.DOWNLOADING -> {
+                                btnAction?.visibility = android.view.View.GONE
+                                progressBar?.visibility = android.view.View.VISIBLE
+                            }
+                            ru.reset.renplay.ui.settings.TransModelState.DOWNLOADED -> {
+                                btnAction?.visibility = android.view.View.VISIBLE
+                                progressBar?.visibility = android.view.View.GONE
+                                btnAction?.setImageResource(dev.oneuiproject.oneui.R.drawable.ic_oui_delete_outline)
+                                btnAction?.imageTintList = android.content.res.ColorStateList.valueOf(colorError)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        dialog.setOnDismissListener {
+            job.cancel()
+        }
+
+        dialog.show()
+        dialog.window?.decorView?.findViewById<android.view.View>(androidx.appcompat.R.id.parentPanel)?.let {
+            dialog.applyCrossWindowBlur(requireContext(), it)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -131,6 +264,27 @@ class OneUiSettingsFragment : PreferenceFragmentCompat() {
                             ThemeOption.DARK, ThemeOption.BLACK -> AppCompatDelegate.MODE_NIGHT_YES
                         }
                         AppCompatDelegate.setDefaultNightMode(mode)
+                    }
+                }
+
+                val langValues = resources.getStringArray(R.array.trans_lang_values)
+                val langNames = resources.getStringArray(R.array.trans_lang_entries)
+
+                launch {
+                    viewModel.transSourceLang.collectLatest { lang ->
+                        val index = langValues.indexOf(lang)
+                        if (index != -1) {
+                            findPreference<androidx.preference.Preference>("trans_source")?.summary = langNames[index]
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.transTargetLang.collectLatest { lang ->
+                        val index = langValues.indexOf(lang)
+                        if (index != -1) {
+                            findPreference<androidx.preference.Preference>("trans_target")?.summary = langNames[index]
+                        }
                     }
                 }
 
@@ -163,7 +317,6 @@ class OneUiSettingsFragment : PreferenceFragmentCompat() {
                             key = "install_engine_zip"
                             title = getString(R.string.engine_install_zip)
                             summary = getString(R.string.engine_install_zip_desc)
-                            setIcon(dev.oneuiproject.oneui.R.drawable.ic_oui_file_type_zip)
                             setOnPreferenceClickListener {
                                 val intent = android.content.Intent(requireContext(), ru.reset.renplay.ui.oneui.picker.OneUiFolderPickerActivity::class.java).apply {
                                     putExtra("mode", "zip")

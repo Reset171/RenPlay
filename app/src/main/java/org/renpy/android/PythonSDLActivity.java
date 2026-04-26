@@ -275,6 +275,25 @@ public class PythonSDLActivity extends SDLActivity {
         if (mGamePath != null && !mGamePath.isEmpty()) {
             nativeSetEnv("ANDROID_PUBLIC", mGamePath);
             nativeSetEnv("RENPY_SAVE_PATH", getFilesDir().getAbsolutePath() + "/saves/" + mGamePath.hashCode());
+
+            try {
+                File gameDir = new File(mGamePath, "game");
+                if (gameDir.exists() && gameDir.isDirectory()) {
+                    File translatorScript = new File(gameDir, "00renplay_translator.rpy");
+                    InputStream is = getAssets().open("00renplay_translator.rpy");
+                    FileOutputStream fos = new FileOutputStream(translatorScript);
+                    byte[] buffer = new byte[8192];
+                    int length;
+                    while ((length = is.read(buffer)) > 0) {
+                        fos.write(buffer, 0, length);
+                    }
+                    fos.flush();
+                    fos.close();
+                    is.close();
+                }
+            } catch (Exception e) {
+                Log.e("PythonSDLActivity", "Failed to inject translator script", e);
+            }
         } else {
             nativeSetEnv("ANDROID_PUBLIC", externalStorage.getAbsolutePath());
         }
@@ -422,6 +441,12 @@ public class PythonSDLActivity extends SDLActivity {
         Log.v("python", "onDestroy()");
 
         super.onDestroy();
+
+        try {
+            ru.reset.renplay.utils.RenPlayTranslator.destroy();
+        } catch (Exception e) {
+            Log.w("PythonSDLActivity", "Failed to destroy translator", e);
+        }
 
         if (mStore != null) {
             mStore.destroy();

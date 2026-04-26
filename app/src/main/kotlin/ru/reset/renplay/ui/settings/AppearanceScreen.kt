@@ -11,11 +11,15 @@ import androidx.compose.animation.core.Transition
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -322,10 +326,12 @@ fun AppearanceScreen(
 }
 
 @Composable
-private fun AppSelectionItem(
+fun AppSelectionItem(
     text: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp, horizontal = 20.dp),
+    trailingContent: @Composable (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val scope = rememberCoroutineScope()
@@ -356,7 +362,7 @@ private fun AppSelectionItem(
         animationSpec = tween(durationMillis = 200),
         label = "SelectionContainer"
     )
-    
+
     val contentColor by animateColorAsState(
         targetValue = if (isSelected) 
             MaterialTheme.colorScheme.onPrimaryContainer 
@@ -382,18 +388,29 @@ private fun AppSelectionItem(
         elevation = CardDefaults.cardElevation(0.dp),
         interactionSource = interactionSource
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp, horizontal = 20.dp),
-            contentAlignment = Alignment.CenterStart
+                .padding(contentPadding),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                textAlign = TextAlign.Start
+                textAlign = TextAlign.Start,
+                modifier = Modifier.weight(1f)
             )
+            if (trailingContent != null) {
+                Spacer(Modifier.width(12.dp))
+                Box(modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                )) {
+                    trailingContent()
+                }
+            }
         }
     }
 }
