@@ -1,10 +1,216 @@
 package ru.reset.renplay.utils.archive
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.RandomAccessFile
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.Inflater
 
 object RpaExtractor {
+
+    data class ExtractResult(
+        val archives: Int,
+        val files: Int,
+        val skipped: Int,
+        val failed: Int,
+        val errors: List<String>
+    )
+
+    /**
+     * Extract all `.rpa` archives found inside [gameDir] (recursively).
+     * Files are written next to the archives, preserving relative paths from the
+     * archive index. Existing files are skipped unless [overwrite] is true.
+     *
+     * Archives are processed in parallel; reads within a single archive are sequential
+     * (single shared RandomAccessFile per archive).
+     *
+     * @param onProgress (completedArchives, totalArchives, archiveName) — called from
+     *                   worker threads, callers must marshal to UI thread.
+     */
+    suspend fun extractAll(
+        gameDir: File,
+        overwrite: Boolean = false,
+        onProgress: ((Int, Int, String) -> Unit)? = null
+    ): ExtractResult = coroutineScope {
+        val archives = withContext(Dispatchers.IO) { findRpaFiles(gameDir) }
+        if (archives.isEmpty()) {
+            return@coroutineScope ExtractResult(0, 0, 0, 0, emptyList())
+        }
+
+        val total = archives.size
+        val completed = AtomicInteger(0)
+        val filesExtracted = AtomicInteger(0)
+        val filesSkipped = AtomicInteger(0)
+        val failed = AtomicInteger(0)
+        val errors = java.util.Collections.synchronizedList(mutableListOf<String>())
+
+        val parallelism = Runtime.getRuntime().availableProcessors().coerceAtLeast(2)
+        val gate = Semaphore(parallelism)
+
+        archives.map { archive ->
+            async(Dispatchers.IO) {
+                gate.withPermit {
+                    try {
+                        val stats = extractArchive(archive, archive.parentFile ?: gameDir, overwrite)
+                        filesExtracted.addAndGet(stats.extracted)
+                        filesSkipped.addAndGet(stats.skipped)
+                    } catch (e: Exception) {
+                        failed.incrementAndGet()
+                        errors.add("${archive.name}: ${e.message ?: e.javaClass.simpleName}")
+                    }
+                    val done = completed.incrementAndGet()
+                    onProgress?.invoke(done, total, archive.name)
+                }
+            }
+        }.awaitAll()
+
+        ExtractResult(
+            archives = total - failed.get(),
+            files = filesExtracted.get(),
+            skipped = filesSkipped.get(),
+            failed = failed.get(),
+            errors = errors.toList()
+        )
+    }
+
+    private data class ArchiveStats(val extracted: Int, val skipped: Int)
+
+    @Suppress("UNCHECKED_CAST")
+    private fun extractArchive(rpaFile: File, outputDir: File, overwrite: Boolean): ArchiveStats {
+        var extracted = 0
+        var skipped = 0
+
+        RandomAccessFile(rpaFile, "r").use { raf ->
+            val (offset, key, version) = readRpaHeader(raf)
+                ?: throw IllegalStateException("Unsupported or invalid RPA archive")
+
+            raf.seek(offset)
+            val compressedSize = (raf.length() - offset).toInt()
+            val compressedData = ByteArray(compressedSize)
+            raf.readFully(compressedData)
+
+            val finalData = inflateAll(compressedData)
+            val index = MiniPickle(finalData).load() as? Map<String, List<Any>>
+                ?: throw IllegalStateException("Failed to parse archive index")
+
+            val readBuffer = ByteArray(64 * 1024)
+
+            for ((fileName, blocks) in index) {
+                val targetFile = File(outputDir, fileName.replace("\\", "/"))
+                if (!overwrite && targetFile.exists()) {
+                    skipped++
+                    continue
+                }
+                targetFile.parentFile?.mkdirs()
+
+                BufferedOutputStream(FileOutputStream(targetFile), 64 * 1024).use { out ->
+                    for (blockInfo in blocks) {
+                        val blockList = blockInfo as? List<Any> ?: continue
+                        val bOffset: Long
+                        val bLength: Long
+                        var prefix: ByteArray = ByteArray(0)
+
+                        if (version == 3) {
+                            bOffset = (blockList[0] as Number).toLong() xor key
+                            bLength = (blockList[1] as Number).toLong() xor key
+                            if (blockList.size > 2) {
+                                prefix = blockList[2] as? ByteArray ?: ByteArray(0)
+                            }
+                        } else {
+                            bOffset = (blockList[0] as Number).toLong()
+                            bLength = (blockList[1] as Number).toLong()
+                        }
+
+                        if (prefix.isNotEmpty()) out.write(prefix)
+
+                        raf.seek(bOffset)
+                        var remaining = bLength
+                        while (remaining > 0L) {
+                            val chunk = if (remaining < readBuffer.size) remaining.toInt() else readBuffer.size
+                            raf.readFully(readBuffer, 0, chunk)
+                            out.write(readBuffer, 0, chunk)
+                            remaining -= chunk
+                        }
+                    }
+                }
+                extracted++
+            }
+        }
+
+        return ArchiveStats(extracted, skipped)
+    }
+
+    private data class RpaHeader(val offset: Long, val key: Long, val version: Int)
+
+    private fun readRpaHeader(raf: RandomAccessFile): RpaHeader? {
+        raf.seek(0)
+        val headerBuilder = StringBuilder()
+        while (true) {
+            val b = raf.read()
+            if (b == -1 || b == '\n'.code || b == '\r'.code) break
+            headerBuilder.append(b.toChar())
+        }
+        val header = headerBuilder.toString().trim()
+
+        return when {
+            header.startsWith("RPA-3.0 ") || header.startsWith("RPA-3.2 ") -> {
+                val parts = header.substring(8).trim().split(' ').filter { it.isNotEmpty() }
+                if (parts.isEmpty()) return null
+                val offset = parts[0].toLong(16)
+                var key = 0L
+                for (i in 1 until parts.size) key = key xor parts[i].toLong(16)
+                RpaHeader(offset, key, 3)
+            }
+            header.startsWith("RPA-2.0 ") -> {
+                val parts = header.substring(8).trim().split(' ').filter { it.isNotEmpty() }
+                if (parts.isEmpty()) return null
+                RpaHeader(parts[0].toLong(16), 0L, 2)
+            }
+            else -> null
+        }
+    }
+
+    private fun inflateAll(compressedData: ByteArray): ByteArray {
+        val inflater = Inflater()
+        try {
+            inflater.setInput(compressedData)
+            var out = ByteArray(compressedData.size * 4)
+            var total = 0
+            val buffer = ByteArray(8192)
+            while (!inflater.finished()) {
+                val count = inflater.inflate(buffer)
+                if (count == 0) break
+                if (total + count > out.size) {
+                    out = out.copyOf(out.size * 2)
+                }
+                System.arraycopy(buffer, 0, out, total, count)
+                total += count
+            }
+            return out.copyOfRange(0, total)
+        } finally {
+            inflater.end()
+        }
+    }
+
+    private fun findRpaFiles(dir: File): List<File> {
+        if (!dir.exists() || !dir.isDirectory) return emptyList()
+        val result = ArrayList<File>(8)
+        dir.walkTopDown().forEach { f ->
+            if (f.isFile && f.extension == "rpa") result.add(f)
+        }
+        // Bigger archives first → balance parallel workers.
+        result.sortByDescending { it.length() }
+        return result
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun extractSingleFileBytes(rpaFile: File, targetFileName: String): ByteArray? {
         try {

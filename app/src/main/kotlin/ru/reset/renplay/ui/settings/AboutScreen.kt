@@ -3,6 +3,10 @@ package ru.reset.renplay.ui.settings
 import android.content.pm.PackageInfo
 import androidx.annotation.RawRes
 import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Transition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
@@ -27,6 +31,7 @@ import ru.reset.renplay.ui.components.feedback.appBlurEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -35,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.reset.renplay.R
 import ru.reset.renplay.ui.components.layout.*
@@ -74,7 +80,8 @@ private val libraryData = listOf(
     LicenseInfo("libwebp", "Copyright © Google LLC", "Libwebp Licenses", "https://developers.google.com/speed/webp/", R.raw.libwebp_license),
     LicenseInfo("OneUI Icons", "Copyright © 2022 Yanndroid & BlackMesa123", "MIT License", "https://github.com/OneUIProject/oneui-icons", R.raw.mit),
     LicenseInfo("OneUI Design (Original Base)", "Copyright © 2022 Yanndroid & BlackMesa123", "MIT License", "https://github.com/OneUIProject/oneui-design", R.raw.mit),
-    LicenseInfo("OneUI Design & SESL (Tribalfs Fork)", "Copyright © 2024 Tribalfs", "MIT License", "https://github.com/tribalfs/oneui-design", R.raw.mit)
+    LicenseInfo("OneUI Design & SESL (Tribalfs Fork)", "Copyright © 2024 Tribalfs", "MIT License", "https://github.com/tribalfs/oneui-design", R.raw.mit),
+    LicenseInfo("unrpyc", "Copyright © 2012-2024 Yuri K. Schlesner, CensoredUsername, Jackmcbarn", "MIT License", "https://github.com/CensoredUsername/unrpyc", R.raw.unrpyc)
 ).sortedBy { it.name.lowercase() }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +106,14 @@ fun AboutScreen(
     val buttonBgColor = if (blurActive) Color.Transparent else androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), scrollProgress)
 
     var showLicensesDialog by remember { mutableStateOf(false) }
+
+    // Logo entrance animation
+    val logoScale = remember { Animatable(0f) }
+    val logoAlpha = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        launch { logoScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)) }
+        launch { logoAlpha.animateTo(1f, tween(durationMillis = 300)) }
+    }
 
     CompositionLocalProvider(LocalAppBlurState provides screenBlurState) {
         AppScaffold(
@@ -145,6 +160,11 @@ fun AboutScreen(
                 modifier = Modifier
                     .size(110.dp)
                     .padding(bottom = 16.dp)
+                    .graphicsLayer {
+                        scaleX = logoScale.value
+                        scaleY = logoScale.value
+                        alpha = logoAlpha.value
+                    }
             )
 
             AppText(

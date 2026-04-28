@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -56,9 +57,13 @@ import ru.reset.renplay.ui.components.appbar.*
 import ru.reset.renplay.ui.components.icons.*
 import ru.reset.renplay.ui.library.LibraryViewModel
 import ru.reset.renplay.ui.library.PlaytimeStats
+import ru.reset.renplay.ui.components.layout.AppSquareActionCard
+import ru.reset.renplay.ui.library.components.ProjectIcon
 import ru.reset.renplay.ui.navigation.Screen
 import ru.reset.renplay.ui.settings.SettingsViewModel
 import ru.reset.renplay.ui.settings.components.*
+import ru.reset.renplay.utils.archive.RpaExtractor
+import ru.reset.renplay.utils.decompiler.DecompilerManager
 import java.io.File
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
@@ -95,6 +100,17 @@ fun GameDetailsScreen(
 
     var showCrashLogsDialog by remember { mutableStateOf(false) }
     var crashLogContent by remember { mutableStateOf("") }
+
+    var showDecompileOverwriteDialog by remember { mutableStateOf(false) }
+    var showDecompileResultDialog by remember { mutableStateOf(false) }
+    var decompileResultText by remember { mutableStateOf("") }
+    var decompileRunning by remember { mutableStateOf(false) }
+    var decompileProgressText by remember { mutableStateOf<String?>(null) }
+
+    var showExtractResultDialog by remember { mutableStateOf(false) }
+    var extractResultText by remember { mutableStateOf("") }
+    var extractRunning by remember { mutableStateOf(false) }
+    var extractProgressText by remember { mutableStateOf<String?>(null) }
 
     val availableEngines = remember { viewModel.engineManager.getInstalledEngines() }
     var showEngineSelectorDialog by remember { mutableStateOf(false) }
@@ -178,6 +194,103 @@ fun GameDetailsScreen(
                 withContext(Dispatchers.Main) {
                     crashLogContent = context.getString(R.string.logs_read_error, e.message)
                     showCrashLogsDialog = true
+                }
+            }
+        }
+    }
+
+    val runDecompilation: (Boolean) -> Unit = { overwrite ->
+        val gameDir = File(project.path, "game")
+        decompileRunning = true
+        decompileProgressText = context.getString(R.string.decompile_running)
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                val result = DecompilerManager.decompileAll(gameDir, overwrite) { current, total, _ ->
+                    coroutineScope.launch(Dispatchers.Main) {
+                        decompileProgressText = context.getString(R.string.decompile_progress, current, total)
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    decompileRunning = false
+                    decompileProgressText = null
+                    if (result.success == 0 && result.skipped == 0 && result.failed == 0) {
+                        appToast.show(context.getString(R.string.decompile_no_rpyc), R.drawable.ic_info)
+                    } else {
+                        val summary = context.getString(R.string.decompile_success, result.success, result.skipped, result.failed)
+                        if (result.errors.isNotEmpty()) {
+                            decompileResultText = summary + "\n\n" + result.errors.joinToString("\n")
+                            showDecompileResultDialog = true
+                        } else {
+                            appToast.show(summary, R.drawable.ic_info)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    decompileRunning = false
+                    decompileProgressText = null
+                    appToast.show(context.getString(R.string.decompile_error, e.message), R.drawable.ic_info)
+                }
+            }
+        }
+    }
+
+    val startDecompilation: () -> Unit = {
+        val gameDir = File(project.path, "game")
+        if (!gameDir.exists() || !gameDir.isDirectory) {
+            appToast.show(context.getString(R.string.error_no_game_folder), R.drawable.ic_info)
+        } else {
+            coroutineScope.launch(Dispatchers.IO) {
+                val hasExisting = gameDir.walkTopDown().any { it.isFile && it.extension == "rpy" }
+                withContext(Dispatchers.Main) {
+                    if (hasExisting) {
+                        showDecompileOverwriteDialog = true
+                    } else {
+                        runDecompilation(false)
+                    }
+                }
+            }
+        }
+    }
+
+    val startExtraction: () -> Unit = {
+        val gameDir = File(project.path, "game")
+        if (!gameDir.exists() || !gameDir.isDirectory) {
+            appToast.show(context.getString(R.string.error_no_game_folder), R.drawable.ic_info)
+        } else {
+            extractRunning = true
+            extractProgressText = context.getString(R.string.extract_rpa_running)
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val result = RpaExtractor.extractAll(gameDir) { current, total, _ ->
+                        coroutineScope.launch(Dispatchers.Main) {
+                            extractProgressText = context.getString(R.string.extract_rpa_progress, current, total)
+                        }
+                    }
+                    withContext(Dispatchers.Main) {
+                        extractRunning = false
+                        extractProgressText = null
+                        if (result.archives == 0 && result.failed == 0) {
+                            appToast.show(context.getString(R.string.extract_rpa_no_archives), R.drawable.ic_info)
+                        } else {
+                            val summary = context.getString(
+                                R.string.extract_rpa_success,
+                                result.archives, result.files, result.skipped, result.failed
+                            )
+                            if (result.errors.isNotEmpty()) {
+                                extractResultText = summary + "\n\n" + result.errors.joinToString("\n")
+                                showExtractResultDialog = true
+                            } else {
+                                appToast.show(summary, R.drawable.ic_info)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        extractRunning = false
+                        extractProgressText = null
+                        appToast.show(context.getString(R.string.extract_rpa_error, e.message), R.drawable.ic_info)
+                    }
                 }
             }
         }
@@ -546,7 +659,7 @@ fun GameDetailsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    ActionSquareCard(
+                    AppSquareActionCard(
                         title = stringResource(R.string.game_details_shortcut),
                         subtitle = stringResource(R.string.game_details_shortcut_desc),
                         icon = painterResource(R.drawable.ic_shortcut),
@@ -581,19 +694,15 @@ fun GameDetailsScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.weight(1f),
-                        blurState = localBlurState,
-                        blurActive = blurActive
+                        modifier = Modifier.weight(1f)
                     )
 
-                    ActionSquareCard(
+                    AppSquareActionCard(
                         title = stringResource(R.string.game_details_logs),
                         subtitle = stringResource(R.string.game_details_logs_desc),
                         icon = painterResource(R.drawable.ic_bug_report),
                         onClick = fetchLogs,
-                        modifier = Modifier.weight(1f),
-                        blurState = localBlurState,
-                        blurActive = blurActive
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
@@ -601,7 +710,7 @@ fun GameDetailsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    ActionSquareCard(
+                    AppSquareActionCard(
                         title = stringResource(R.string.game_details_edit),
                         subtitle = stringResource(R.string.game_details_edit_desc),
                         icon = painterResource(R.drawable.ic_format_paint),
@@ -612,11 +721,22 @@ fun GameDetailsScreen(
                             editGameBg = project.customBackgroundPath
                             showEditGameDialog = true
                         },
-                        modifier = Modifier.weight(1f),
-                        blurState = localBlurState,
-                        blurActive = blurActive
+                        modifier = Modifier.weight(1f)
                     )
 
+                    AppSquareActionCard(
+                        title = stringResource(R.string.decompile_scripts),
+                        subtitle = decompileProgressText ?: stringResource(R.string.decompile_scripts_desc),
+                        icon = painterResource(R.drawable.ic_description),
+                        onClick = { if (!decompileRunning) startDecompilation() },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     AppCard(
                         onClick = { showDeleteGameDialog = true },
                         modifier = Modifier.weight(1f).aspectRatio(1f)
@@ -642,12 +762,34 @@ fun GameDetailsScreen(
                                 AppIcon(painterResource(R.drawable.ic_delete), null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp))
                             }
                             Column {
-                                AppText(stringResource(R.string.game_details_delete), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                                AppText(
+                                    text = stringResource(R.string.game_details_delete),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    lineHeight = 20.sp
+                                )
                                 Spacer(Modifier.height(4.dp))
-                                AppText(stringResource(R.string.game_details_delete_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                AppText(
+                                    text = stringResource(R.string.game_details_delete_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }
+
+                    AppSquareActionCard(
+                        title = stringResource(R.string.extract_rpa),
+                        subtitle = extractProgressText ?: stringResource(R.string.extract_rpa_desc),
+                        icon = painterResource(R.drawable.ic_folder_zip),
+                        onClick = { if (!extractRunning) startExtraction() },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
@@ -793,6 +935,78 @@ fun GameDetailsScreen(
             }
         }
 
+        if (showDecompileOverwriteDialog) {
+            AppBottomPanel(
+                onDismissRequest = { showDecompileOverwriteDialog = false },
+                title = stringResource(R.string.decompile_overwrite_title),
+                icon = painterResource(R.drawable.ic_description),
+                buttons = { dismiss ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AppButton(
+                            onClick = {
+                                dismiss()
+                                runDecompilation(false)
+                            },
+                            text = stringResource(R.string.decompile_btn_skip),
+                            modifier = Modifier.weight(1f),
+                            cornerRadius = 16.dp,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        AppButton(
+                            onClick = {
+                                dismiss()
+                                runDecompilation(true)
+                            },
+                            text = stringResource(R.string.decompile_btn_overwrite),
+                            modifier = Modifier.weight(1f),
+                            cornerRadius = 16.dp
+                        )
+                    }
+                }
+            ) {
+                AppText(
+                    text = stringResource(R.string.decompile_overwrite_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+        }
+
+        if (showDecompileResultDialog) {
+            AppBottomPanel(
+                onDismissRequest = { showDecompileResultDialog = false },
+                title = stringResource(R.string.decompile_scripts),
+                icon = painterResource(R.drawable.ic_description)
+            ) {
+                AppLogConsole(
+                    logs = decompileResultText.lines(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp)
+                )
+            }
+        }
+
+        if (showExtractResultDialog) {
+            AppBottomPanel(
+                onDismissRequest = { showExtractResultDialog = false },
+                title = stringResource(R.string.extract_rpa),
+                icon = painterResource(R.drawable.ic_folder_zip)
+            ) {
+                AppLogConsole(
+                    logs = extractResultText.lines(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp)
+                )
+            }
+        }
+
         if (showDeleteGameDialog) {
             AppBottomPanel(
                 onDismissRequest = { showDeleteGameDialog = false },
@@ -838,46 +1052,3 @@ fun GameDetailsScreen(
     }
 }
 
-@Composable
-private fun ActionSquareCard(
-    title: String,
-    subtitle: String,
-    icon: Painter,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    blurState: AppBlurState,
-    blurActive: Boolean
-) {
-    AppCard(
-        onClick = onClick,
-        modifier = modifier
-            .aspectRatio(1f)
-            .appBlurEffect(
-                state = blurState,
-                shape = RoundedCornerShape(24.dp),
-                blurRadius = 20.dp,
-                tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f),
-                forceInvalidation = true
-            ),
-        containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(24.dp),
-        elevation = 0.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp).fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Box(
-                modifier = Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                AppIcon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-            }
-            Column {
-                AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Spacer(Modifier.height(4.dp))
-                AppText(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-        }
-    }
-}

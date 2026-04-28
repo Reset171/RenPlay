@@ -69,6 +69,8 @@ import ru.reset.renplay.ui.components.typography.*
 import ru.reset.renplay.ui.components.appbar.*
 import ru.reset.renplay.ui.components.icons.*
 import ru.reset.renplay.ui.navigation.Screen
+import ru.reset.renplay.ui.components.appbar.AppFloatingToolbar
+import ru.reset.renplay.ui.library.components.*
 import ru.reset.renplay.ui.settings.SettingsViewModel
 import ru.reset.renplay.ui.settings.components.*
 import java.io.File
@@ -91,6 +93,7 @@ fun LibraryScreen(
 
     val useGameDetailsScreen by settingsViewModel.useGameDetailsScreen.collectAsState()
     val advancedAnimationsEnabled by settingsViewModel.advancedAnimationsEnabled.collectAsState()
+    val showListBg by settingsViewModel.showListBg.collectAsState()
 
     val projectsList by viewModel.projectsList.collectAsState()
     val filteredProjects by viewModel.filteredProjects.collectAsState()
@@ -254,7 +257,8 @@ fun LibraryScreen(
                         activeProjectId = project.id
                         navController.navigate(Screen.GameDetails.createRoute(project.id))
                     },
-                    useGameDetailsScreen = useGameDetailsScreen
+                    useGameDetailsScreen = useGameDetailsScreen,
+                    showListBg = showListBg
                 )
             }
             }
@@ -286,23 +290,8 @@ fun LibraryScreen(
                     )
                     Spacer(Modifier.weight(1f))
 
-                    Surface(
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        color = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f * pillAlpha),
-                        modifier = Modifier
-                            .appBlurEffect(
-                                state = screenBlurState,
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                                blurRadius = 16.dp * pillAlpha,
-                                tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f * pillAlpha),
-                                forceInvalidation = true
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 4.dp * scrollProgress, vertical = 4.dp * scrollProgress),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val leftShape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = 6.dp, bottomEnd = 6.dp)
+                    AppFloatingToolbar(scrollProgress = pillAlpha) {
+                        val leftShape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = 6.dp, bottomEnd = 6.dp)
                             val middleShape = RoundedCornerShape(6.dp)
                             val rightShape = RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp, topEnd = 24.dp, bottomEnd = 24.dp)
 
@@ -376,7 +365,6 @@ fun LibraryScreen(
                             ) {
                                 AppIcon(painterResource(R.drawable.ic_settings), null)
                             }
-                        }
                     }
                 }
 
@@ -539,313 +527,4 @@ fun LibraryScreen(
     }
 }
 
-private val CardGradientBrush = Brush.verticalGradient(
-    colors = listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.85f))
-)
 
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-fun SeamlessGameCard(
-    project: Project,
-    iconCache: Map<String, Bitmap>,
-    isGridView: Boolean,
-    advancedAnimationsEnabled: Boolean,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    activeProjectId: String?,
-    useGameDetailsScreen: Boolean,
-    searchQuery: String = "",
-    isDragging: Boolean = false,
-    onClick: () -> Unit,
-    onInfoClick: () -> Unit
-) {
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
-    val gridHeight = (screenWidth - 48.dp) / 2
-    val listHeight = 88.dp
-
-    if (advancedAnimationsEnabled) {
-        val scale by animateFloatAsState(if (isDragging) 1.05f else 1f, label = "drag_scale")
-        val elevation by animateDpAsState(if (isDragging) 12.dp else if (isGridView) 4.dp else 2.dp, label = "drag_elevation")
-
-        val transition = updateTransition(targetState = isGridView, label = "card_morph")
-
-        val cardRadius by transition.animateDp(label = "card_radius") { if (it) 24.dp else 20.dp }
-        val containerColor by transition.animateColor(label = "container_color") { 
-            if (it) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer 
-        }
-        val height by transition.animateDp(label = "height") { if (it) gridHeight else listHeight }
-        val imageSize by transition.animateDp(label = "img_size") { if (it) gridHeight else 64.dp }
-        val imagePadding by transition.animateDp(label = "img_padding") { if (it) 0.dp else 12.dp }
-        val imageRadius by transition.animateDp(label = "img_radius") { if (it) 24.dp else 14.dp }
-        val gradientAlpha by transition.animateFloat(label = "gradient") { if (it) 1f else 0f }
-        val verticalBias by transition.animateFloat(label = "v_bias") { if (it) 1f else 0f }
-        val textStartPadding by transition.animateDp(label = "text_start") { if (it) 16.dp else 92.dp }
-        val textBottomPadding by transition.animateDp(label = "text_bottom") { if (it) 16.dp else 0.dp }
-        val titleColor by transition.animateColor(label = "title_color") { 
-            if (it) Color.White else MaterialTheme.colorScheme.onSurface 
-        }
-        val subTitleColor by transition.animateColor(label = "sub_color") { 
-            if (it) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant 
-        }
-        val borderColor by transition.animateColor(label = "border_color") {
-            if (it) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else Color.Transparent
-        }
-
-        val infoVerticalBias by transition.animateFloat(label = "info_v") { if (it) -1f else 0f }
-        val infoEndPadding by transition.animateDp(label = "info_end") { if (it) 8.dp else 16.dp }
-        val infoTopPadding by transition.animateDp(label = "info_top") { if (it) 8.dp else 0.dp }
-
-        GameCardContent(
-            project = project, iconCache = iconCache, isGridView = isGridView,
-            advancedAnimationsEnabled = true, sharedTransitionScope = sharedTransitionScope,
-            animatedVisibilityScope = animatedVisibilityScope, scale = scale, elevation = elevation,
-            cardRadius = cardRadius, containerColor = containerColor, height = height,
-            imageSize = imageSize, imagePadding = imagePadding, imageRadius = imageRadius,
-            gradientAlpha = gradientAlpha, verticalBias = verticalBias, textStartPadding = textStartPadding,
-            textBottomPadding = textBottomPadding, titleColor = titleColor, subTitleColor = subTitleColor,
-            borderColor = borderColor,
-            infoVerticalBias = infoVerticalBias, infoEndPadding = infoEndPadding, infoTopPadding = infoTopPadding,
-            activeProjectId = activeProjectId, useGameDetailsScreen = useGameDetailsScreen,
-            searchQuery = searchQuery,
-            onClick = onClick, onInfoClick = onInfoClick
-        )
-    } else {
-        GameCardContent(
-            project = project, iconCache = iconCache, isGridView = isGridView,
-            advancedAnimationsEnabled = false, sharedTransitionScope = sharedTransitionScope,
-            animatedVisibilityScope = animatedVisibilityScope, 
-            scale = if (isDragging) 1.05f else 1f, 
-            elevation = if (isDragging) 12.dp else if (isGridView) 4.dp else 2.dp,
-            cardRadius = if (isGridView) 24.dp else 20.dp, 
-            containerColor = if (isGridView) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer, 
-            height = if (isGridView) gridHeight else listHeight,
-            imageSize = if (isGridView) gridHeight else 64.dp, 
-            imagePadding = if (isGridView) 0.dp else 12.dp, 
-            imageRadius = if (isGridView) 24.dp else 14.dp,
-            gradientAlpha = if (isGridView) 1f else 0f, 
-            verticalBias = if (isGridView) 1f else 0f, 
-            textStartPadding = if (isGridView) 16.dp else 92.dp,
-            textBottomPadding = if (isGridView) 16.dp else 0.dp, 
-            titleColor = if (isGridView) Color.White else MaterialTheme.colorScheme.onSurface, 
-            subTitleColor = if (isGridView) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
-            borderColor = if (isGridView) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else Color.Transparent,
-            infoVerticalBias = if (isGridView) -1f else 0f,
-            infoEndPadding = if (isGridView) 8.dp else 16.dp,
-            infoTopPadding = if (isGridView) 8.dp else 0.dp,
-            activeProjectId = activeProjectId,
-            useGameDetailsScreen = useGameDetailsScreen,
-            searchQuery = searchQuery,
-            onClick = onClick,
-            onInfoClick = onInfoClick
-        )
-    }
-}
-
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-private fun GameCardContent(
-    project: Project,
-    iconCache: Map<String, Bitmap>,
-    isGridView: Boolean,
-    advancedAnimationsEnabled: Boolean,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    scale: Float,
-    elevation: androidx.compose.ui.unit.Dp,
-    cardRadius: androidx.compose.ui.unit.Dp,
-    containerColor: Color,
-    height: androidx.compose.ui.unit.Dp,
-    imageSize: androidx.compose.ui.unit.Dp,
-    imagePadding: androidx.compose.ui.unit.Dp,
-    imageRadius: androidx.compose.ui.unit.Dp,
-    gradientAlpha: Float,
-    verticalBias: Float,
-    textStartPadding: androidx.compose.ui.unit.Dp,
-    textBottomPadding: androidx.compose.ui.unit.Dp,
-    titleColor: Color,
-    subTitleColor: Color,
-    borderColor: Color,
-    infoVerticalBias: Float,
-    infoEndPadding: androidx.compose.ui.unit.Dp,
-    infoTopPadding: androidx.compose.ui.unit.Dp,
-    activeProjectId: String?,
-    useGameDetailsScreen: Boolean,
-    searchQuery: String = "",
-    onClick: () -> Unit,
-    onInfoClick: () -> Unit
-) {
-    val useSharedTransition = advancedAnimationsEnabled && (activeProjectId == null || activeProjectId == project.id)
-
-    val blurActive = LocalAppBlurState.current.blurEnabled
-    val cardBlurState = rememberAppBlurState()
-    cardBlurState.blurEnabled = blurActive
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-    ) {
-        AppCard(
-            onClick = onClick,
-            modifier = Modifier.fillMaxWidth().height(height),
-            containerColor = containerColor,
-            shape = RoundedCornerShape(cardRadius),
-            elevation = elevation,
-            border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize().appBlurSource(cardBlurState)) {
-                    with(sharedTransitionScope) {
-                        ProjectIcon(
-                        bitmap = iconCache[project.customIconPath ?: project.iconPath ?: ""],
-                        projectName = project.name,
-                        modifier = Modifier
-                            .padding(start = imagePadding, top = imagePadding)
-                            .size(imageSize)
-                            .then(
-                                if (useSharedTransition) {
-                                    Modifier.sharedElement(
-                                        rememberSharedContentState(key = "image-${project.id}"),
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
-                                    )
-                                } else Modifier
-                            ),
-                        shape = RoundedCornerShape(imageRadius)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = gradientAlpha }
-                        .background(CardGradientBrush)
-                )
-
-                Column(
-                    modifier = Modifier
-                        .align(BiasAlignment(-1f, verticalBias))
-                        .padding(start = textStartPadding, bottom = textBottomPadding, end = 16.dp)
-                ) {
-                    with(sharedTransitionScope) {
-                        val primaryColor = MaterialTheme.colorScheme.primary
-                        val annotatedName = remember(project.name, searchQuery, primaryColor) {
-                            androidx.compose.ui.text.buildAnnotatedString {
-                                val str = project.name
-                                append(str)
-                                if (searchQuery.isNotBlank()) {
-                                    val index = str.indexOf(searchQuery, ignoreCase = true)
-                                    if (index >= 0) {
-                                        addStyle(
-                                            style = androidx.compose.ui.text.SpanStyle(color = primaryColor),
-                                            start = index,
-                                            end = index + searchQuery.length
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Text(
-                            text = annotatedName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = titleColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = if (useSharedTransition) {
-                                Modifier.sharedBounds(
-                                    rememberSharedContentState(key = "title-${project.id}"),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(),
-                                    boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
-                                )
-                            } else Modifier
-                        )
-                    }
-                    if (project.version.isNotEmpty()) {
-                        Spacer(Modifier.height(if (isGridView) 2.dp else 4.dp))
-                        with(sharedTransitionScope) {
-                            AppText(
-                                text = stringResource(R.string.version_prefix, project.version),
-                                style = if (isGridView) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodySmall,
-                                color = subTitleColor,
-                                modifier = if (useSharedTransition) {
-                                    Modifier.sharedBounds(
-                                        rememberSharedContentState(key = "version-${project.id}"),
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(),
-                                        boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
-                                    )
-                                } else Modifier
-                            )
-                        }
-                    }
-                }
-                }
-
-                if (!useGameDetailsScreen && activeProjectId != project.id) {
-                    AppIconButton(
-                        onClick = onInfoClick,
-                        modifier = Modifier
-                            .align(androidx.compose.ui.BiasAlignment(1f, infoVerticalBias))
-                            .padding(end = infoEndPadding, top = infoTopPadding)
-                            .zIndex(1f)
-                            .appBlurEffect(
-                                state = cardBlurState,
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                                blurRadius = 16.dp,
-                                tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
-                                forceInvalidation = true
-                            ),
-                        backgroundColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
-                        iconTint = titleColor,
-                        size = 36.dp,
-                        iconSize = 20.dp,
-                        shape = androidx.compose.foundation.shape.CircleShape
-                    ) {
-                        AppIcon(painterResource(R.drawable.ic_info), null)
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-
-@Composable
-fun ProjectIcon(
-    bitmap: Bitmap?,
-    projectName: String,
-    modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(12.dp)
-) {
-    if (bitmap != null) {
-        val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
-        Image(
-            bitmap = imageBitmap,
-            contentDescription = projectName,
-            modifier = modifier.clip(shape),
-            contentScale = ContentScale.Crop
-        )
-    } else {
-        Box(
-            modifier = modifier
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-            contentAlignment = Alignment.Center
-        ) {
-            AppIcon(
-                painter = painterResource(id = R.drawable.ic_no_icon),
-                contentDescription = projectName,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}

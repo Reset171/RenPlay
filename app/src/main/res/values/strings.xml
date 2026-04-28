@@ -18,6 +18,8 @@
     <string name="nav_engine_settings">Настройки Ren\'Py</string>
     <string name="setting_use_game_details">Экран «Об игре»</string>
     <string name="setting_use_game_details_desc">Показывать подробную информацию об игре перед запуском</string>
+    <string name="setting_show_list_bg">Фон в списке</string>
+    <string name="setting_show_list_bg_desc">Отображать фон игры в правой части карточки</string>
 
     <string name="group_language">Язык</string>
     <string name="item_app_language">Язык приложения</string>
@@ -114,8 +116,8 @@
     <string name="game_details_shortcut_desc">Добавить на главный экран</string>
     <string name="game_details_logs">Смотреть логи</string>
     <string name="game_details_logs_desc">Отладка и ошибки Ren\'Py</string>
-    <string name="game_details_delete">Удалить из библиотеки</string>
-    <string name="game_details_delete_desc">Файлы игры останутся на устройстве</string>
+    <string name="game_details_delete">Удалить игру</string>
+    <string name="game_details_delete_desc">Файлы останутся на устройстве</string>
     <string name="label_tool">Управление</string>
     
     <string name="stat_total">Всего в игре</string>
@@ -169,4 +171,24 @@
     <string name="edit_game_save">СОХРАНИТЬ</string>
     <string name="btn_choose_bg">ВЫБРАТЬ ФОН</string>
     <string name="engine_management_title">Управление версиями Ren\'Py</string>
+
+    <string name="decompile_scripts">Декомпиляция</string>
+    <string name="decompile_scripts_desc">Конвертация .rpyc в .rpy</string>
+    <string name="decompile_progress">Декомпиляция: %1$d / %2$d</string>
+    <string name="decompile_success">Готово: %1$d декомпилировано, %2$d пропущено, %3$d ошибок</string>
+    <string name="decompile_error">Ошибка декомпиляции: %1$s</string>
+    <string name="decompile_no_rpyc">Файлы .rpyc не найдены</string>
+    <string name="decompile_overwrite_title">Перезаписать файлы?</string>
+    <string name="decompile_overwrite_desc">Обнаружены уже декомпилированные файлы. Перезаписать их?</string>
+    <string name="decompile_btn_overwrite">Перезаписать</string>
+    <string name="decompile_btn_skip">Пропустить существующие</string>
+    <string name="decompile_running">Декомпиляция...</string>
+
+    <string name="extract_rpa">Распаковка .rpa</string>
+    <string name="extract_rpa_desc">Извлечь содержимое архивов</string>
+    <string name="extract_rpa_progress">Распаковка: %1$d / %2$d</string>
+    <string name="extract_rpa_running">Распаковка...</string>
+    <string name="extract_rpa_success">Готово: %1$d архивов, %2$d файлов извлечено, %3$d пропущено, %4$d ошибок</string>
+    <string name="extract_rpa_no_archives">Архивы .rpa не найдены</string>
+    <string name="extract_rpa_error">Ошибка распаковки: %1$s</string>
 </resources>

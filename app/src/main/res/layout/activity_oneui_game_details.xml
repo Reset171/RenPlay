@@ -190,6 +190,26 @@
                         app:showBottomDivider="true" />
 
                     <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_action_decompile"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/decompile_scripts"
+                        app:summary="@string/decompile_scripts_desc"
+                        app:icon="@drawable/ic_oui_document_outline"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="true" />
+
+                    <dev.oneuiproject.oneui.widget.CardItemView
+                        android:id="@+id/card_action_extract"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:title="@string/extract_rpa"
+                        app:summary="@string/extract_rpa_desc"
+                        app:icon="@drawable/ic_oui_folder_outline"
+                        app:showTopDivider="false"
+                        app:showBottomDivider="true" />
+
+                    <dev.oneuiproject.oneui.widget.CardItemView
                         android:id="@+id/card_action_delete"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

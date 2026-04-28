@@ -144,16 +144,12 @@ fun AppBottomPanel(
                         tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f),
                         forceInvalidation = true
                     )
-                    .border(
-                        width = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                        shape = panelShape
-                    )
             } else Modifier
 
             Card(
                 modifier = baseCardModifier
                     .then(glassModifier)
+                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), panelShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null

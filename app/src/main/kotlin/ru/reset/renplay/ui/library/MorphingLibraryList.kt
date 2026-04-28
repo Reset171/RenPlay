@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import ru.reset.renplay.domain.models.Project
+import ru.reset.renplay.ui.library.components.SeamlessGameCard
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -43,6 +44,7 @@ fun MorphingLibraryList(
     searchQuery: String,
     advancedAnimationsEnabled: Boolean,
     useGameDetailsScreen: Boolean,
+    showListBg: Boolean,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     activeProjectId: String?,
@@ -143,6 +145,7 @@ fun MorphingLibraryList(
                     activeProjectId = activeProjectId,
                     isDragging = isDragging,
                     useGameDetailsScreen = useGameDetailsScreen,
+                    showListBg = showListBg,
                     searchQuery = searchQuery,
                     onClick = { onGameClick(project) },
                     onInfoClick = { onInfoClick(project) }

@@ -110,6 +110,7 @@ fun AppearanceScreen(
     val settingsViewModel: SettingsViewModel = viewModel(viewModelStoreOwner = context as androidx.activity.ComponentActivity, factory = AppViewModelProvider.Factory)
     val useGameDetailsScreen by settingsViewModel.useGameDetailsScreen.collectAsState()
     val advancedAnimationsEnabled by settingsViewModel.advancedAnimationsEnabled.collectAsState()
+    val showListBg by settingsViewModel.showListBg.collectAsState()
 
     val scrollState = rememberScrollState()
     val scrollProgress by remember { derivedStateOf { (scrollState.value / 80f).coerceIn(0f, 1f) } }
@@ -222,6 +223,20 @@ fun AppearanceScreen(
                     AppSwitch(
                         checked = advancedAnimationsEnabled,
                         onCheckedChange = { settingsViewModel.onAdvancedAnimationsChanged(it) }
+                    )
+                },
+                showDivider = true
+            )
+
+            SettingsItem(
+                title = stringResource(R.string.setting_show_list_bg),
+                description = stringResource(R.string.setting_show_list_bg_desc),
+                icon = painterResource(id = R.drawable.ic_view_list),
+                onClick = { settingsViewModel.onShowListBgChanged(!showListBg) },
+                trailingContent = {
+                    AppSwitch(
+                        checked = showListBg,
+                        onCheckedChange = { settingsViewModel.onShowListBgChanged(it) }
                     )
                 },
                 showDivider = true
@@ -381,6 +396,7 @@ fun AppSelectionItem(
                 scaleY = scale.value
             },
         shape = RoundedCornerShape(20.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor

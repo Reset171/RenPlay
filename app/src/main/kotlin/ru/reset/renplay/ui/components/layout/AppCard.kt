@@ -34,7 +34,7 @@ fun AppCard(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     elevation: Dp = 2.dp,
     shape: RoundedCornerShape = RoundedCornerShape(28.dp),
-    border: androidx.compose.foundation.BorderStroke? = null,
+    border: androidx.compose.foundation.BorderStroke? = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }

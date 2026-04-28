@@ -34,7 +34,8 @@ class OneUiLicensesActivity : AppCompatActivity() {
         LicenseInfo("libwebp", "Copyright © Google LLC", "Libwebp Licenses", R.raw.libwebp_license),
         LicenseInfo("OneUI Icons", "Copyright © 2022 Yanndroid & BlackMesa123", "MIT License", R.raw.mit),
         LicenseInfo("OneUI Design (Original Base)", "Copyright © 2022 Yanndroid & BlackMesa123", "MIT License", R.raw.mit),
-        LicenseInfo("OneUI Design & SESL (Tribalfs Fork)", "Copyright © 2024 Tribalfs", "MIT License", R.raw.mit)
+        LicenseInfo("OneUI Design & SESL (Tribalfs Fork)", "Copyright © 2024 Tribalfs", "MIT License", R.raw.mit),
+        LicenseInfo("unrpyc", "Copyright © 2012-2024 Yuri K. Schlesner, CensoredUsername, Jackmcbarn", "MIT License", R.raw.unrpyc)
     ).sortedBy { it.name.lowercase() }
 
     override fun onCreate(savedInstanceState: Bundle?) {

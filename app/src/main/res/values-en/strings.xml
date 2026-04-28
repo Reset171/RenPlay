@@ -18,6 +18,8 @@
     <string name="nav_engine_settings">Ren\'Py Settings</string>
     <string name="setting_use_game_details">About Game Screen</string>
     <string name="setting_use_game_details_desc">Show detailed info before launching</string>
+    <string name="setting_show_list_bg">List Backgrounds</string>
+    <string name="setting_show_list_bg_desc">Show game background on the right side of cards</string>
 
     <string name="group_language">Language</string>
     <string name="item_app_language">App Language</string>
@@ -167,4 +169,24 @@
     <string name="edit_game_save">SAVE</string>
     <string name="btn_choose_bg">CHOOSE BACKGROUND</string>
     <string name="engine_management_title">Ren\'Py Version Management</string>
+
+    <string name="decompile_scripts">Decompile Scripts</string>
+    <string name="decompile_scripts_desc">Convert .rpyc to readable .rpy files</string>
+    <string name="decompile_progress">Decompiling: %1$d / %2$d</string>
+    <string name="decompile_success">Done: %1$d decompiled, %2$d skipped, %3$d errors</string>
+    <string name="decompile_error">Decompile error: %1$s</string>
+    <string name="decompile_no_rpyc">No .rpyc files found</string>
+    <string name="decompile_overwrite_title">Overwrite files?</string>
+    <string name="decompile_overwrite_desc">Previously decompiled files found. Overwrite them?</string>
+    <string name="decompile_btn_overwrite">Overwrite</string>
+    <string name="decompile_btn_skip">Skip existing</string>
+    <string name="decompile_running">Decompiling...</string>
+
+    <string name="extract_rpa">Extract .rpa</string>
+    <string name="extract_rpa_desc">Extract contents of .rpa archives</string>
+    <string name="extract_rpa_progress">Extracting: %1$d / %2$d</string>
+    <string name="extract_rpa_running">Extracting...</string>
+    <string name="extract_rpa_success">Done: %1$d archives, %2$d files extracted, %3$d skipped, %4$d errors</string>
+    <string name="extract_rpa_no_archives">No .rpa archives found</string>
+    <string name="extract_rpa_error">Extraction error: %1$s</string>
 </resources>

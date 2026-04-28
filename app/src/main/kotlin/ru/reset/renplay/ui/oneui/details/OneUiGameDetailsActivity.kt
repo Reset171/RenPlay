@@ -34,6 +34,7 @@ import ru.reset.renplay.ui.library.LibraryViewModel
 import ru.reset.renplay.ui.oneui.components.OneUiTextBottomSheet
 import ru.reset.renplay.utils.PREFS_NAME
 import ru.reset.renplay.utils.archive.RpaExtractor
+import ru.reset.renplay.utils.decompiler.DecompilerManager
 import java.io.File
 
 class OneUiGameDetailsActivity : AppCompatActivity() {
@@ -192,9 +193,139 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
                     }
                 }
 
+                findViewById<CardItemView>(R.id.card_action_decompile).setOnClickListener {
+                    startDecompilation(project.path)
+                }
+
+                findViewById<CardItemView>(R.id.card_action_extract).setOnClickListener {
+                    startExtraction(project.path)
+                }
+
                 findViewById<CardItemView>(R.id.card_action_delete).setOnClickListener {
                     viewModel.removeProject(project)
                     finish()
+                }
+            }
+        }
+    }
+
+    private fun startDecompilation(projectPath: String) {
+        val gameDir = File(projectPath, "game")
+        if (!gameDir.exists() || !gameDir.isDirectory) {
+            Toast.makeText(this, getString(R.string.error_no_game_folder), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // Check if any .rpy files already exist (to offer overwrite choice)
+        lifecycleScope.launch(Dispatchers.IO) {
+            val hasExisting = gameDir.walkTopDown().any { it.isFile && it.extension == "rpy" }
+
+            withContext(Dispatchers.Main) {
+                if (hasExisting) {
+                    androidx.appcompat.app.AlertDialog.Builder(this@OneUiGameDetailsActivity)
+                        .setTitle(R.string.decompile_overwrite_title)
+                        .setMessage(R.string.decompile_overwrite_desc)
+                        .setPositiveButton(R.string.decompile_btn_overwrite) { _, _ ->
+                            runDecompilation(gameDir, overwrite = true)
+                        }
+                        .setNegativeButton(R.string.decompile_btn_skip) { _, _ ->
+                            runDecompilation(gameDir, overwrite = false)
+                        }
+                        .show()
+                } else {
+                    runDecompilation(gameDir, overwrite = false)
+                }
+            }
+        }
+    }
+
+    private fun runDecompilation(gameDir: File, overwrite: Boolean) {
+        val decompileCard = findViewById<CardItemView>(R.id.card_action_decompile)
+        decompileCard.isEnabled = false
+        decompileCard.summary = getString(R.string.decompile_running)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val result = DecompilerManager.decompileAll(
+                    gameDir,
+                    overwrite
+                ) { current, total, fileName ->
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        decompileCard.summary = getString(R.string.decompile_progress, current, total)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    decompileCard.isEnabled = true
+                    decompileCard.summary = getString(R.string.decompile_scripts_desc)
+
+                    if (result.success == 0 && result.skipped == 0 && result.failed == 0) {
+                        Toast.makeText(this@OneUiGameDetailsActivity, getString(R.string.decompile_no_rpyc), Toast.LENGTH_LONG).show()
+                    } else {
+                        val summary = getString(R.string.decompile_success, result.success, result.skipped, result.failed)
+                        if (result.errors.isNotEmpty()) {
+                            val fullText = summary + "\n\n" + result.errors.joinToString("\n")
+                            OneUiTextBottomSheet(getString(R.string.decompile_scripts), fullText, true)
+                                .show(supportFragmentManager, null)
+                        } else {
+                            Toast.makeText(this@OneUiGameDetailsActivity, summary, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    decompileCard.isEnabled = true
+                    decompileCard.summary = getString(R.string.decompile_scripts_desc)
+                    Toast.makeText(this@OneUiGameDetailsActivity, getString(R.string.decompile_error, e.message), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun startExtraction(projectPath: String) {
+        val gameDir = File(projectPath, "game")
+        if (!gameDir.exists() || !gameDir.isDirectory) {
+            Toast.makeText(this, getString(R.string.error_no_game_folder), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val extractCard = findViewById<CardItemView>(R.id.card_action_extract)
+        extractCard.isEnabled = false
+        extractCard.summary = getString(R.string.extract_rpa_running)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val result = RpaExtractor.extractAll(gameDir) { current, total, _ ->
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        extractCard.summary = getString(R.string.extract_rpa_progress, current, total)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    extractCard.isEnabled = true
+                    extractCard.summary = getString(R.string.extract_rpa_desc)
+
+                    if (result.archives == 0 && result.failed == 0) {
+                        Toast.makeText(this@OneUiGameDetailsActivity, getString(R.string.extract_rpa_no_archives), Toast.LENGTH_LONG).show()
+                    } else {
+                        val summary = getString(
+                            R.string.extract_rpa_success,
+                            result.archives, result.files, result.skipped, result.failed
+                        )
+                        if (result.errors.isNotEmpty()) {
+                            val fullText = summary + "\n\n" + result.errors.joinToString("\n")
+                            OneUiTextBottomSheet(getString(R.string.extract_rpa), fullText, true)
+                                .show(supportFragmentManager, null)
+                        } else {
+                            Toast.makeText(this@OneUiGameDetailsActivity, summary, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    extractCard.isEnabled = true
+                    extractCard.summary = getString(R.string.extract_rpa_desc)
+                    Toast.makeText(this@OneUiGameDetailsActivity, getString(R.string.extract_rpa_error, e.message), Toast.LENGTH_LONG).show()
                 }
             }
         }

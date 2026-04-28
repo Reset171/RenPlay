@@ -82,6 +82,7 @@ fun AppButton(
         enabled = enabled,
         shape = RoundedCornerShape(cornerRadius),
         shadowElevation = elevation,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         interactionSource = interactionSource,
         color = animatedBackgroundColor
     ) {

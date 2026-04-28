@@ -18,6 +18,7 @@ private const val KEY_APP_LANGUAGE = "app_language"
 private const val KEY_ENABLE_BLUR = "enable_blur"
 private const val KEY_USE_GAME_DETAILS = "use_game_details"
 private const val KEY_ADVANCED_ANIMATIONS = "advanced_animations"
+private const val KEY_SHOW_LIST_BG = "show_list_bg"
 
 private const val KEY_HW_VIDEO = "hw_video"
 private const val KEY_PHONE_VARIANT = "phone_variant"
@@ -124,6 +125,14 @@ class SettingsViewModel(private val prefs: SharedPreferences, private val engine
     fun onAdvancedAnimationsChanged(enabled: Boolean) {
         _advancedAnimationsEnabled.value = enabled
         prefs.edit().putBoolean(KEY_ADVANCED_ANIMATIONS, enabled).apply()
+    }
+
+    private val _showListBg = MutableStateFlow(prefs.getBoolean(KEY_SHOW_LIST_BG, true))
+    val showListBg = _showListBg.asStateFlow()
+
+    fun onShowListBgChanged(enabled: Boolean) {
+        _showListBg.value = enabled
+        prefs.edit().putBoolean(KEY_SHOW_LIST_BG, enabled).apply()
     }
 
     private val _hwVideoEnabled = MutableStateFlow(prefs.getBoolean(KEY_HW_VIDEO, true))
