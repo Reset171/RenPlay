@@ -26,7 +26,7 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -35,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -57,11 +56,10 @@ import ru.reset.renplay.ui.components.appbar.*
 import ru.reset.renplay.ui.components.icons.*
 import ru.reset.renplay.ui.library.LibraryViewModel
 import ru.reset.renplay.ui.library.PlaytimeStats
-import ru.reset.renplay.ui.components.layout.AppSquareActionCard
 import ru.reset.renplay.ui.library.components.ProjectIcon
 import ru.reset.renplay.ui.navigation.Screen
 import ru.reset.renplay.ui.settings.SettingsViewModel
-import ru.reset.renplay.ui.settings.components.*
+import ru.reset.renplay.ui.settings.components.SettingsItem
 import ru.reset.renplay.utils.archive.RpaExtractor
 import ru.reset.renplay.utils.decompiler.DecompilerManager
 import java.io.File
@@ -84,8 +82,10 @@ fun GameDetailsScreen(
 
     val projectsList by viewModel.projectsList.collectAsState()
     val iconCache by viewModel.iconCache.collectAsState()
+    val bgCache by viewModel.bgCache.collectAsState()
     val advancedAnimationsEnabled by settingsViewModel.advancedAnimationsEnabled.collectAsState()
-    
+    val useListControlStyle by settingsViewModel.useListControlStyle.collectAsState()
+
     var displayProject by remember { mutableStateOf(projectsList.find { it.id == projectId }) }
     LaunchedEffect(projectsList) {
         val p = projectsList.find { it.id == projectId }
@@ -297,24 +297,16 @@ fun GameDetailsScreen(
     }
 
     val bitmap = iconCache[project.customIconPath ?: project.iconPath ?: ""]
-    val localBlurState = rememberAppBlurState()
-    localBlurState.blurEnabled = LocalAppBlurState.current.blurEnabled
-    val blurActive = localBlurState.blurEnabled
+    val blurActive = LocalAppBlurState.current.blurEnabled
 
-    val initialBg = remember(project.path) {
-        try {
-            val bgCacheDir = File(context.cacheDir, "project_backgrounds")
-            val cachedBgFile = File(bgCacheDir, "${project.path.hashCode()}_bg.jpg")
-            if (cachedBgFile.exists()) {
-                val options = android.graphics.BitmapFactory.Options().apply {
-                    inSampleSize = 2
-                }
-                android.graphics.BitmapFactory.decodeFile(cachedBgFile.absolutePath, options)
-            } else null
-        } catch (e: Exception) { null }
-    }
+    val screenBlurState = rememberAppBlurState()
+    screenBlurState.blurEnabled = blurActive
 
-    var backgroundBitmap by remember { mutableStateOf<Bitmap?>(initialBg) }
+    val bgBlurState = rememberAppBlurState()
+    bgBlurState.blurEnabled = blurActive
+
+    val bgKey = project.customBackgroundPath ?: project.backgroundPath?.takeIf { it.isNotBlank() }
+    var backgroundBitmap by remember(bgKey, bgCache) { mutableStateOf(bgKey?.let { bgCache[it] }) }
 
     LaunchedEffect(project.path) {
         if (backgroundBitmap != null) return@LaunchedEffect
@@ -329,494 +321,553 @@ fun GameDetailsScreen(
         }
     }
 
-    CompositionLocalProvider(LocalAppBlurState provides localBlurState) {
-        Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .appBlurSource(localBlurState)
-            ) {
-            val bgSource = backgroundBitmap ?: bitmap
-            bgSource?.let { src ->
-                androidx.compose.animation.AnimatedContent(
-                    targetState = src,
-                    transitionSpec = { androidx.compose.animation.fadeIn(tween(500)) togetherWith androidx.compose.animation.fadeOut(tween(500)) },
-                    label = "BackgroundCrossfade"
-                ) { targetBmp ->
-                    Image(
-                        bitmap = targetBmp.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .blur(
-                                radius = 80.dp,
-                                edgeTreatment = BlurredEdgeTreatment.Unbounded
-                            ),
-                        contentScale = ContentScale.Crop
-                    )
-                }
+    val scrollState = rememberScrollState()
+    val scrollProgress by remember { androidx.compose.runtime.derivedStateOf { (scrollState.value / 80f).coerceIn(0f, 1f) } }
+    val buttonBgColor = if (blurActive) Color.Transparent else androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), scrollProgress)
+
+    CompositionLocalProvider(LocalAppBlurState provides screenBlurState) {
+        AppScaffold(
+            showTopBottomGradients = false,
+            topBar = {
+                RenPlayAppBar(
+                    title = "",
+                    scrollProgress = scrollProgress,
+                    navigationIcon = {
+                        AppIconButton(
+                            onClick = { navController.popBackStack() },
+                            backgroundColor = buttonBgColor,
+                            shape = CircleShape,
+                            modifier = Modifier.appBlurEffect(
+                                state = screenBlurState,
+                                shape = CircleShape,
+                                blurRadius = 16.dp * scrollProgress,
+                                tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f * scrollProgress),
+                                forceInvalidation = true
+                            )
+                        ) {
+                            AppIcon(painterResource(R.drawable.ic_arrow_back), null)
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Black.copy(alpha = 0.3f),
-                                    Color.Black.copy(alpha = 0.85f)
-                                )
-                            )
-                        )
-                )
-            } ?: run {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
-            }
-        }
-
-        val scrollState = rememberScrollState()
-        val scrollProgress by remember { androidx.compose.runtime.derivedStateOf { (scrollState.value / 80f).coerceIn(0f, 1f) } }
-        val buttonBgColor = if (blurActive) Color.Transparent else androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0f), MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), scrollProgress)
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-        ) {
-            Spacer(Modifier.statusBarsPadding().height(56.dp))
-
-            with(sharedTransitionScope) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .appBlurSource(screenBlurState)
                 ) {
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
-                            contentDescription = project.name,
-                            modifier = Modifier
-                                .size(110.dp)
-                                .then(
-                                    if (advancedAnimationsEnabled) {
-                                        Modifier.sharedElement(
-                                            sharedContentState = rememberSharedContentState(key = "image-${project.id}"),
-                                            animatedVisibilityScope = animatedVisibilityScope,
-                                            boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
-                                        )
-                                    } else Modifier
+                    Box(modifier = Modifier.fillMaxSize().appBlurSource(bgBlurState)) {
+                        val bgSource = backgroundBitmap ?: bitmap
+                        bgSource?.let { src ->
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = src,
+                                transitionSpec = { androidx.compose.animation.fadeIn(tween(500)) togetherWith androidx.compose.animation.fadeOut(tween(500)) },
+                                label = "BackgroundCrossfade"
+                            ) { targetBmp ->
+                                Image(
+                                    bitmap = targetBmp.asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .blur(
+                                            radius = 80.dp,
+                                            edgeTreatment = BlurredEdgeTreatment.Unbounded
+                                        ),
+                                    contentScale = ContentScale.Crop
                                 )
-                                .clip(RoundedCornerShape(28.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(110.dp)
-                                .then(
-                                    if (advancedAnimationsEnabled) {
-                                        Modifier.sharedElement(
-                                            sharedContentState = rememberSharedContentState(key = "image-${project.id}"),
-                                            animatedVisibilityScope = animatedVisibilityScope,
-                                            boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Black.copy(alpha = 0.3f),
+                                                Color.Black.copy(alpha = 0.85f)
+                                            )
                                         )
-                                    } else Modifier
-                                )
-                                .clip(RoundedCornerShape(28.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AppIcon(
-                                painter = painterResource(id = R.drawable.ic_no_icon),
-                                contentDescription = project.name,
-                                modifier = Modifier.size(52.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                             )
+                        } ?: run {
+                            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                         }
                     }
-                    
-                    Spacer(Modifier.width(20.dp))
-                    
-                    Column(modifier = Modifier.weight(1f)) {
-                        AppText(
-                            text = project.name,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = if (advancedAnimationsEnabled) {
-                                Modifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(key = "title-${project.id}"),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(),
-                                    boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
-                                )
-                            } else Modifier
-                        )
-                        
-                        if (project.version.isNotEmpty()) {
-                            Spacer(Modifier.height(8.dp))
-                            Surface(
-                                color = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.appBlurEffect(
-                                    state = localBlurState,
-                                    shape = RoundedCornerShape(12.dp),
-                                    blurRadius = 16.dp,
-                                    tint = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                                    forceInvalidation = true
-                                )
-                            ) {
-                                AppText(
-                                    text = stringResource(R.string.version_prefix, project.version),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+
+                    CompositionLocalProvider(LocalAppBlurState provides bgBlurState) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                        ) {
+                            Spacer(Modifier.height(paddingValues.calculateTopPadding() + 56.dp))
+
+                            with(sharedTransitionScope) {
+                                Row(
                                     modifier = Modifier
-                                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                                        .then(
-                                            if (advancedAnimationsEnabled) {
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (bitmap != null) {
+                                        Image(
+                                            bitmap = bitmap.asImageBitmap(),
+                                            contentDescription = project.name,
+                                            modifier = Modifier
+                                                .size(110.dp)
+                                                .then(
+                                                    if (advancedAnimationsEnabled) {
+                                                        Modifier.sharedElement(
+                                                            sharedContentState = rememberSharedContentState(key = "image-${project.id}"),
+                                                            animatedVisibilityScope = animatedVisibilityScope,
+                                                            boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
+                                                        )
+                                                    } else Modifier
+                                                )
+                                                .clip(RoundedCornerShape(28.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(110.dp)
+                                                .then(
+                                                    if (advancedAnimationsEnabled) {
+                                                        Modifier.sharedElement(
+                                                            sharedContentState = rememberSharedContentState(key = "image-${project.id}"),
+                                                            animatedVisibilityScope = animatedVisibilityScope,
+                                                            boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
+                                                        )
+                                                    } else Modifier
+                                                )
+                                                .clip(RoundedCornerShape(28.dp))
+                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AppIcon(
+                                                painter = painterResource(id = R.drawable.ic_no_icon),
+                                                contentDescription = project.name,
+                                                modifier = Modifier.size(52.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    
+                                    Spacer(Modifier.width(20.dp))
+                                    
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        AppText(
+                                            text = project.name,
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                            modifier = if (advancedAnimationsEnabled) {
                                                 Modifier.sharedBounds(
-                                                    sharedContentState = rememberSharedContentState(key = "version-${project.id}"),
+                                                    sharedContentState = rememberSharedContentState(key = "title-${project.id}"),
                                                     animatedVisibilityScope = animatedVisibilityScope,
                                                     resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(),
                                                     boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
                                                 )
                                             } else Modifier
                                         )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            AppButton(
-                onClick = launchGame,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .height(64.dp)
-                    .appBlurEffect(
-                        state = localBlurState,
-                        shape = RoundedCornerShape(24.dp),
-                        blurRadius = 20.dp,
-                        tint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        forceInvalidation = true
-                    ),
-                cornerRadius = 24.dp,
-                containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
-                elevation = if (blurActive) 0.dp else 2.dp
-            ) {
-                AppIcon(painterResource(R.drawable.ic_play_arrow), null, modifier = Modifier.size(28.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = stringResource(R.string.game_details_play),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            
-            Spacer(Modifier.height(24.dp))
-            
-            AppCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .appBlurEffect(
-                        state = localBlurState,
-                        shape = RoundedCornerShape(20.dp),
-                        blurRadius = 20.dp,
-                        tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
-                        forceInvalidation = true
-                    ),
-                containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
-                elevation = 0.dp,
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            AppIcon(
-                                painter = painterResource(R.drawable.ic_schedule),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            AppText(
-                                text = stringResource(R.string.stat_total),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        AppText(
-                            text = formatPlaytime(playtimeStats.totalMillis),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(40.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    )
-
-                    Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            AppIcon(
-                                painter = painterResource(R.drawable.ic_schedule),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            AppText(
-                                text = stringResource(R.string.stat_today),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        AppText(
-                            text = formatPlaytime(playtimeStats.todayMillis),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(32.dp))
-
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                AppText(
-                    text = stringResource(R.string.game_details_launch_params),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-                )
-
-                val actualEngine = viewModel.engineManager.getEngine(project.engineVersion)
-                val engineDesc = if (actualEngine != null) {
-                    if (project.engineVersion == null) stringResource(R.string.engine_auto_selected, actualEngine.version) else stringResource(R.string.engine_bound_to, actualEngine.version)
-                } else stringResource(R.string.engine_not_installed)
-
-                AppCard(
-                    onClick = { if (availableEngines.isNotEmpty()) showEngineSelectorDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                        .appBlurEffect(
-                            state = localBlurState,
-                            shape = RoundedCornerShape(24.dp),
-                            blurRadius = 20.dp,
-                            tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f),
-                            forceInvalidation = true
-                        ),
-                    containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
-                    shape = RoundedCornerShape(24.dp),
-                    elevation = 0.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AppIcon(painterResource(R.drawable.ic_memory), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            AppText(stringResource(R.string.engine_version_renpy), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(2.dp))
-                            AppText(engineDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-
-                AppText(
-                    text = stringResource(R.string.label_tool),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 8.dp, top = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    AppSquareActionCard(
-                        title = stringResource(R.string.game_details_shortcut),
-                        subtitle = stringResource(R.string.game_details_shortcut_desc),
-                        icon = painterResource(R.drawable.ic_shortcut),
-                        onClick = {
-                            if (ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
-                                val engine = viewModel.engineManager.getEngine(project.engineVersion)
-                                if (engine != null) {
-                                    val intent = Intent(context, ru.reset.renplay.MainActivity::class.java).apply {
-                                        action = "ru.reset.renplay.LAUNCH_GAME"
-                                        putExtra("GAME_PATH", project.path)
-                                        putExtra("GAME_NAME", project.name)
-                                        putExtra("ENGINE_PATH", engine.dirPath)
-                                        putExtra("ENGINE_VERSION", engine.version)
-                                        putExtra("ENGINE_ZIP", engine.zipPath)
-                                        putExtra("ENGINE_LIB", engine.dirPath + "/lib")
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                        
+                                        if (project.version.isNotEmpty()) {
+                                            Spacer(Modifier.height(8.dp))
+                                            Surface(
+                                                color = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.secondaryContainer,
+                                                shape = RoundedCornerShape(12.dp),
+                                                modifier = Modifier.appBlurEffect(
+                                                    state = bgBlurState,
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    blurRadius = 16.dp,
+                                                    tint = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                                                    forceInvalidation = true
+                                                )
+                                            ) {
+                                                AppText(
+                                                    text = stringResource(R.string.version_prefix, project.version),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier
+                                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                                        .then(
+                                                            if (advancedAnimationsEnabled) {
+                                                                Modifier.sharedBounds(
+                                                                    sharedContentState = rememberSharedContentState(key = "version-${project.id}"),
+                                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                                    resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(),
+                                                                    boundsTransform = { _, _ -> tween(durationMillis = 350, easing = FastOutSlowInEasing) }
+                                                                )
+                                                            } else Modifier
+                                                        )
+                                                )
+                                            }
+                                        }
                                     }
-                                    val icon = if (bitmap != null) {
-                                        val scaled = Bitmap.createScaledBitmap(bitmap, 192, 192, true)
-                                        IconCompat.createWithBitmap(scaled)
-                                    } else {
-                                        IconCompat.createWithResource(context, R.mipmap.ic_launcher)
-                                    }
-                                    val shortcutInfo = ShortcutInfoCompat.Builder(context, "game_${project.id}")
-                                        .setShortLabel(project.name)
-                                        .setIntent(intent)
-                                        .setIcon(icon)
-                                        .build()
-                                    ShortcutManagerCompat.requestPinShortcut(context, shortcutInfo, null)
-                                } else {
-                                    appToast.show(context.getString(R.string.engine_not_installed_toast), R.drawable.ic_info)
                                 }
                             }
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
 
-                    AppSquareActionCard(
-                        title = stringResource(R.string.game_details_logs),
-                        subtitle = stringResource(R.string.game_details_logs_desc),
-                        icon = painterResource(R.drawable.ic_bug_report),
-                        onClick = fetchLogs,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    AppSquareActionCard(
-                        title = stringResource(R.string.game_details_edit),
-                        subtitle = stringResource(R.string.game_details_edit_desc),
-                        icon = painterResource(R.drawable.ic_format_paint),
-                        onClick = {
-                            editGameName = project.name
-                            editGameVersion = project.version
-                            editGameIcon = project.customIconPath
-                            editGameBg = project.customBackgroundPath
-                            showEditGameDialog = true
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    AppSquareActionCard(
-                        title = stringResource(R.string.decompile_scripts),
-                        subtitle = decompileProgressText ?: stringResource(R.string.decompile_scripts_desc),
-                        icon = painterResource(R.drawable.ic_description),
-                        onClick = { if (!decompileRunning) startDecompilation() },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    AppCard(
-                        onClick = { showDeleteGameDialog = true },
-                        modifier = Modifier.weight(1f).aspectRatio(1f)
-                            .appBlurEffect(
-                                state = localBlurState,
-                                shape = RoundedCornerShape(24.dp),
-                                blurRadius = 20.dp,
-                                tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f),
-                                forceInvalidation = true
-                            ),
-                        containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(24.dp),
-                        elevation = 0.dp
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp).fillMaxSize(),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Box(
-                                modifier = Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.errorContainer),
-                                contentAlignment = Alignment.Center
+                            AppButton(
+                                onClick = launchGame,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                                    .height(64.dp)
+                                    .appBlurEffect(
+                                        state = bgBlurState,
+                                        shape = RoundedCornerShape(24.dp),
+                                        blurRadius = 20.dp,
+                                        tint = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                        forceInvalidation = true
+                                    ),
+                                cornerRadius = 24.dp,
+                                containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
+                                elevation = if (blurActive) 0.dp else 2.dp
                             ) {
-                                AppIcon(painterResource(R.drawable.ic_delete), null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp))
-                            }
-                            Column {
-                                AppText(
-                                    text = stringResource(R.string.game_details_delete),
+                                AppIcon(painterResource(R.drawable.ic_play_arrow), null, modifier = Modifier.size(28.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = stringResource(R.string.game_details_play),
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.error,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    lineHeight = 20.sp
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                AppText(
-                                    text = stringResource(R.string.game_details_delete_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
+                            
+                            Spacer(Modifier.height(24.dp))
+                            
+                            AppCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                                    .appBlurEffect(
+                                        state = bgBlurState,
+                                        shape = RoundedCornerShape(20.dp),
+                                        blurRadius = 20.dp,
+                                        tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
+                                        forceInvalidation = true
+                                    ),
+                                containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                elevation = 0.dp,
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            AppIcon(
+                                                painter = painterResource(R.drawable.ic_schedule),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            AppText(
+                                                text = stringResource(R.string.stat_total),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                        AppText(
+                                            text = formatPlaytime(playtimeStats.totalMillis),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .width(1.dp)
+                                            .height(40.dp)
+                                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                    )
+
+                                    Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            AppIcon(
+                                                painter = painterResource(R.drawable.ic_schedule),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            AppText(
+                                                text = stringResource(R.string.stat_today),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Spacer(Modifier.height(4.dp))
+                                        AppText(
+                                            text = formatPlaytime(playtimeStats.todayMillis),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(32.dp))
+
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                AppText(
+                                    text = stringResource(R.string.game_details_launch_params),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                                )
+
+                                val actualEngine = viewModel.engineManager.getEngine(project.engineVersion)
+                                val engineDesc = if (actualEngine != null) {
+                                    if (project.engineVersion == null) stringResource(R.string.engine_auto_selected, actualEngine.version) else stringResource(R.string.engine_bound_to, actualEngine.version)
+                                } else stringResource(R.string.engine_not_installed)
+
+                                AppCard(
+                                    onClick = { if (availableEngines.isNotEmpty()) showEngineSelectorDialog = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                        .appBlurEffect(
+                                            state = bgBlurState,
+                                            shape = RoundedCornerShape(24.dp),
+                                            blurRadius = 20.dp,
+                                            tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f),
+                                            forceInvalidation = true
+                                        ),
+                                    containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
+                                    shape = RoundedCornerShape(24.dp),
+                                    elevation = 0.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(20.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AppIcon(painterResource(R.drawable.ic_memory), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                                        }
+                                        Spacer(Modifier.width(16.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            AppText(stringResource(R.string.engine_version_renpy), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                            Spacer(Modifier.height(2.dp))
+                                            AppText(engineDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+
+                                AppText(
+                                    text = stringResource(R.string.label_tool),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(start = 8.dp, top = 12.dp)
+                                )
+
+                                val shortcutAction = {
+                                    if (ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
+                                        val engine = viewModel.engineManager.getEngine(project.engineVersion)
+                                        if (engine != null) {
+                                            val intent = Intent(context, ru.reset.renplay.MainActivity::class.java).apply {
+                                                action = "ru.reset.renplay.LAUNCH_GAME"
+                                                putExtra("GAME_PATH", project.path)
+                                                putExtra("GAME_NAME", project.name)
+                                                putExtra("ENGINE_PATH", engine.dirPath)
+                                                putExtra("ENGINE_VERSION", engine.version)
+                                                putExtra("ENGINE_ZIP", engine.zipPath)
+                                                putExtra("ENGINE_LIB", engine.dirPath + "/lib")
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                            }
+                                            val icon = if (bitmap != null) {
+                                                val scaled = Bitmap.createScaledBitmap(bitmap, 192, 192, true)
+                                                IconCompat.createWithBitmap(scaled)
+                                            } else {
+                                                IconCompat.createWithResource(context, R.mipmap.ic_launcher)
+                                            }
+                                            val shortcutInfo = ShortcutInfoCompat.Builder(context, "game_${project.id}")
+                                                .setShortLabel(project.name)
+                                                .setIntent(intent)
+                                                .setIcon(icon)
+                                                .build()
+                                            ShortcutManagerCompat.requestPinShortcut(context, shortcutInfo, null)
+                                        } else {
+                                            appToast.show(context.getString(R.string.engine_not_installed_toast), R.drawable.ic_info)
+                                        }
+                                    }
+                                }
+
+                                val editAction = {
+                                    editGameName = project.name
+                                    editGameVersion = project.version
+                                    editGameIcon = project.customIconPath
+                                    editGameBg = project.customBackgroundPath
+                                    showEditGameDialog = true
+                                }
+
+                                if (useListControlStyle) {
+                                    AppCard(
+                                        modifier = Modifier.fillMaxWidth()
+                                            .appBlurEffect(
+                                                state = bgBlurState,
+                                                shape = RoundedCornerShape(24.dp),
+                                                blurRadius = 20.dp,
+                                                tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f),
+                                                forceInvalidation = true
+                                            ),
+                                        containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
+                                        shape = RoundedCornerShape(24.dp),
+                                        elevation = 0.dp
+                                    ) {
+                                        SettingsItem(
+                                            title = stringResource(R.string.game_details_shortcut),
+                                            description = stringResource(R.string.game_details_shortcut_desc),
+                                            icon = painterResource(R.drawable.ic_shortcut),
+                                            onClick = { shortcutAction() },
+                                            showDivider = true
+                                        )
+                                        SettingsItem(
+                                            title = stringResource(R.string.game_details_logs),
+                                            description = stringResource(R.string.game_details_logs_desc),
+                                            icon = painterResource(R.drawable.ic_bug_report),
+                                            onClick = fetchLogs,
+                                            showDivider = true
+                                        )
+                                        SettingsItem(
+                                            title = stringResource(R.string.game_details_edit),
+                                            description = stringResource(R.string.game_details_edit_desc),
+                                            icon = painterResource(R.drawable.ic_format_paint),
+                                            onClick = { editAction() },
+                                            showDivider = true
+                                        )
+                                        SettingsItem(
+                                            title = stringResource(R.string.decompile_scripts),
+                                            description = decompileProgressText ?: stringResource(R.string.decompile_scripts_desc),
+                                            icon = painterResource(R.drawable.ic_description),
+                                            onClick = { if (!decompileRunning) startDecompilation() },
+                                            showDivider = true
+                                        )
+                                        SettingsItem(
+                                            title = stringResource(R.string.extract_rpa),
+                                            description = extractProgressText ?: stringResource(R.string.extract_rpa_desc),
+                                            icon = painterResource(R.drawable.ic_folder_zip),
+                                            onClick = { if (!extractRunning) startExtraction() },
+                                            showDivider = true
+                                        )
+                                        SettingsItem(
+                                            title = stringResource(R.string.game_details_delete),
+                                            description = stringResource(R.string.game_details_delete_desc),
+                                            icon = painterResource(R.drawable.ic_delete),
+                                            onClick = { showDeleteGameDialog = true },
+                                            showDivider = false,
+                                            titleModifier = Modifier.graphicsLayer { alpha = 0.99f }
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        AppSquareActionCard(
+                                            title = stringResource(R.string.game_details_shortcut),
+                                            subtitle = stringResource(R.string.game_details_shortcut_desc),
+                                            icon = painterResource(R.drawable.ic_shortcut),
+                                            onClick = { shortcutAction() },
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        AppSquareActionCard(
+                                            title = stringResource(R.string.game_details_logs),
+                                            subtitle = stringResource(R.string.game_details_logs_desc),
+                                            icon = painterResource(R.drawable.ic_bug_report),
+                                            onClick = fetchLogs,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        AppSquareActionCard(
+                                            title = stringResource(R.string.game_details_edit),
+                                            subtitle = stringResource(R.string.game_details_edit_desc),
+                                            icon = painterResource(R.drawable.ic_format_paint),
+                                            onClick = { editAction() },
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        AppSquareActionCard(
+                                            title = stringResource(R.string.decompile_scripts),
+                                            subtitle = decompileProgressText ?: stringResource(R.string.decompile_scripts_desc),
+                                            icon = painterResource(R.drawable.ic_description),
+                                            onClick = { if (!decompileRunning) startDecompilation() },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        AppCard(
+                                            onClick = { showDeleteGameDialog = true },
+                                            modifier = Modifier.weight(1f).aspectRatio(1f)
+                                                .appBlurEffect(
+                                                    state = bgBlurState,
+                                                    shape = RoundedCornerShape(24.dp),
+                                                    blurRadius = 20.dp,
+                                                    tint = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f),
+                                                    forceInvalidation = true
+                                                ),
+                                            containerColor = if (blurActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
+                                            shape = RoundedCornerShape(24.dp),
+                                            elevation = 0.dp
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(16.dp).fillMaxSize(),
+                                                verticalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.errorContainer),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    AppIcon(painterResource(R.drawable.ic_delete), null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp))
+                                                }
+                                                Column {
+                                                    AppText(stringResource(R.string.game_details_delete), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                                                    Spacer(Modifier.height(4.dp))
+                                                    AppText(stringResource(R.string.game_details_delete_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                                }
+                                            }
+                                        }
+
+                                        AppSquareActionCard(
+                                            title = stringResource(R.string.extract_rpa),
+                                            subtitle = extractProgressText ?: stringResource(R.string.extract_rpa_desc),
+                                            icon = painterResource(R.drawable.ic_folder_zip),
+                                            onClick = { if (!extractRunning) startExtraction() },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(paddingValues.calculateBottomPadding() + 24.dp))
                         }
                     }
-
-                    AppSquareActionCard(
-                        title = stringResource(R.string.extract_rpa),
-                        subtitle = extractProgressText ?: stringResource(R.string.extract_rpa_desc),
-                        icon = painterResource(R.drawable.ic_folder_zip),
-                        onClick = { if (!extractRunning) startExtraction() },
-                        modifier = Modifier.weight(1f)
-                    )
                 }
             }
-
-            Spacer(Modifier.height(40.dp))
         }
-
-        RenPlayAppBar(
-            title = "",
-            scrollProgress = scrollProgress,
-            modifier = Modifier.align(Alignment.TopCenter),
-            navigationIcon = {
-                AppIconButton(
-                    onClick = { navController.popBackStack() },
-                    backgroundColor = buttonBgColor,
-                    shape = CircleShape,
-                    modifier = Modifier.appBlurEffect(
-                        state = localBlurState,
-                        shape = CircleShape,
-                        blurRadius = 16.dp * scrollProgress,
-                        tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f * scrollProgress),
-                        forceInvalidation = true
-                    )
-                ) {
-                    AppIcon(painterResource(R.drawable.ic_arrow_back), null)
-                }
-            }
-        )
 
         if (showEngineSelectorDialog) {
             AppBottomPanel(
@@ -941,9 +992,9 @@ fun GameDetailsScreen(
                 title = stringResource(R.string.decompile_overwrite_title),
                 icon = painterResource(R.drawable.ic_description),
                 buttons = { dismiss ->
-                    Row(
+                    AdaptiveButtonLayout(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        spacing = 12.dp
                     ) {
                         AppButton(
                             onClick = {
@@ -951,7 +1002,6 @@ fun GameDetailsScreen(
                                 runDecompilation(false)
                             },
                             text = stringResource(R.string.decompile_btn_skip),
-                            modifier = Modifier.weight(1f),
                             cornerRadius = 16.dp,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -962,7 +1012,6 @@ fun GameDetailsScreen(
                                 runDecompilation(true)
                             },
                             text = stringResource(R.string.decompile_btn_overwrite),
-                            modifier = Modifier.weight(1f),
                             cornerRadius = 16.dp
                         )
                     }
@@ -1013,14 +1062,13 @@ fun GameDetailsScreen(
                 title = stringResource(R.string.game_delete_confirm_title),
                 icon = painterResource(R.drawable.ic_delete),
                 buttons = { dismiss ->
-                    Row(
+                    AdaptiveButtonLayout(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        spacing = 12.dp
                     ) {
                         AppButton(
                             onClick = { dismiss() },
                             text = stringResource(R.string.action_cancel),
-                            modifier = Modifier.weight(1f),
                             cornerRadius = 16.dp,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1032,7 +1080,6 @@ fun GameDetailsScreen(
                                 viewModel.removeProject(project)
                             },
                             text = stringResource(R.string.action_delete),
-                            modifier = Modifier.weight(1f),
                             cornerRadius = 16.dp,
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.error
@@ -1049,6 +1096,4 @@ fun GameDetailsScreen(
             }
         }
     }
-    }
 }
-

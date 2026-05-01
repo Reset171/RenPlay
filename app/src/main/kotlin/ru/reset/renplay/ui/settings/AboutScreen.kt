@@ -107,7 +107,6 @@ fun AboutScreen(
 
     var showLicensesDialog by remember { mutableStateOf(false) }
 
-    // Logo entrance animation
     val logoScale = remember { Animatable(0f) }
     val logoAlpha = remember { Animatable(0f) }
     LaunchedEffect(Unit) {

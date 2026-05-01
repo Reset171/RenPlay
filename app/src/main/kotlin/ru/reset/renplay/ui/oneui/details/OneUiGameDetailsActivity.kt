@@ -216,7 +216,6 @@ class OneUiGameDetailsActivity : AppCompatActivity() {
             return
         }
 
-        // Check if any .rpy files already exist (to offer overwrite choice)
         lifecycleScope.launch(Dispatchers.IO) {
             val hasExisting = gameDir.walkTopDown().any { it.isFile && it.extension == "rpy" }
 

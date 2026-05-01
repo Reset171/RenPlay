@@ -67,11 +67,12 @@ fun AppCard(
     )
 
     Card(
-        modifier = modifier
+        modifier = Modifier
             .graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
             }
+            .then(modifier)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(

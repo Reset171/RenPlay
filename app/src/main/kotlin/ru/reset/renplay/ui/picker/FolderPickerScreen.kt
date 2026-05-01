@@ -354,7 +354,10 @@ fun PickerItemRow(
                 scaleY = scale.value
             },
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)),
+        border = androidx.compose.foundation.BorderStroke(
+            if (item.isGame) 1.dp else 0.5.dp, 
+            if (item.isGame) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
+        ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface

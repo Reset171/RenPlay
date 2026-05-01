@@ -64,6 +64,9 @@ class OneUiFolderPickerAdapter(
             titleView.text = item.name
             val context = itemView.context
 
+            val backgroundRes = if (item.isGame) R.drawable.bg_list_card_game else R.drawable.bg_list_card
+            itemView.setBackgroundResource(backgroundRes)
+
             bgView.setImageDrawable(null)
             overlayView.visibility = View.GONE
             iconView.clearColorFilter()

@@ -101,12 +101,13 @@ fun AppIconButton(
     }
 
     Box(
-        modifier = modifier
-            .size(size)
+        modifier = Modifier
             .graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
             }
+            .then(modifier)
+            .size(size)
             .clip(shape)
             .background(effectiveBackgroundColor)
             .clickable(

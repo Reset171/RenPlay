@@ -191,4 +191,7 @@
     <string name="extract_rpa_success">Готово: %1$d архивов, %2$d файлов извлечено, %3$d пропущено, %4$d ошибок</string>
     <string name="extract_rpa_no_archives">Архивы .rpa не найдены</string>
     <string name="extract_rpa_error">Ошибка распаковки: %1$s</string>
+
+    <string name="setting_list_control_style">Стиль управления</string>
+    <string name="setting_list_control_style_desc">Отображать меню списком вместо сетки</string>
 </resources>

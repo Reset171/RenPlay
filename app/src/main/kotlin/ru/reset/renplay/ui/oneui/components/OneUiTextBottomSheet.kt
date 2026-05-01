@@ -23,6 +23,10 @@ class OneUiTextBottomSheet(
         view?.rootView?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let {
             dialog?.applyCrossWindowBlur(requireContext(), it)
         }
+        @Suppress("DEPRECATION")
+        dialog?.window?.decorView?.apply {
+            systemUiVisibility = systemUiVisibility and View.SYSTEM_UI_FLAG_FULLSCREEN.inv() and View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY.inv()
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

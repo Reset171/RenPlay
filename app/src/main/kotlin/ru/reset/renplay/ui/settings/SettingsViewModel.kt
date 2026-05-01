@@ -119,6 +119,14 @@ class SettingsViewModel(private val prefs: SharedPreferences, private val engine
         prefs.edit().putBoolean(KEY_USE_GAME_DETAILS, enabled).apply()
     }
 
+    private val _useListControlStyle = MutableStateFlow(prefs.getBoolean("use_list_control_style", false))
+    val useListControlStyle = _useListControlStyle.asStateFlow()
+
+    fun onUseListControlStyleChanged(enabled: Boolean) {
+        _useListControlStyle.value = enabled
+        prefs.edit().putBoolean("use_list_control_style", enabled).apply()
+    }
+
     private val _advancedAnimationsEnabled = MutableStateFlow(prefs.getBoolean(KEY_ADVANCED_ANIMATIONS, true))
     val advancedAnimationsEnabled = _advancedAnimationsEnabled.asStateFlow()
 

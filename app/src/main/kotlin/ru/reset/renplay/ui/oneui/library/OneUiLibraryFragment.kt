@@ -49,6 +49,7 @@ class OneUiLibraryFragment : Fragment(R.layout.oneui_fragment_library) {
     private lateinit var recyclerView: RoundedRecyclerView
     private lateinit var emptyStateLayout: LinearLayout
     private lateinit var toolbarLayout: ToolbarLayout
+    private lateinit var folderPickerLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
 
     override fun onResume() {
         super.onResume()
@@ -65,21 +66,11 @@ class OneUiLibraryFragment : Fragment(R.layout.oneui_fragment_library) {
         
         recyclerView = view.findViewById(R.id.recycler_view)
         emptyStateLayout = view.findViewById(R.id.empty_state_layout)
-        val folderPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        folderPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 val path = result.data?.getStringExtra("selectedPath") ?: return@registerForActivityResult
                 AddGameBottomSheet.newInstance(path).show(parentFragmentManager, null)
             }
-        }
-
-        val fab = view.findViewById<ScrollAwareFloatingActionButton>(R.id.fab)
-
-        fab.hideOnScroll(recyclerView)
-        fab.setOnClickListener {
-            val intent = Intent(requireContext(), OneUiFolderPickerActivity::class.java).apply {
-                putExtra("mode", "game")
-            }
-            folderPickerLauncher.launch(intent)
         }
 
         adapter = OneUiProjectsAdapter(
@@ -221,6 +212,13 @@ class OneUiLibraryFragment : Fragment(R.layout.oneui_fragment_library) {
                     R.id.menu_view_type -> {
                         viewModel.toggleGridView()
                         requireActivity().invalidateOptionsMenu()
+                        true
+                    }
+                    R.id.menu_add_game -> {
+                        val intent = Intent(requireContext(), OneUiFolderPickerActivity::class.java).apply {
+                            putExtra("mode", "game")
+                        }
+                        folderPickerLauncher.launch(intent)
                         true
                     }
                     R.id.menu_sort -> {

@@ -41,6 +41,9 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
     private val _iconCache = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
     val iconCache = _iconCache.asStateFlow()
 
+    private val _bgCache = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+    val bgCache = _bgCache.asStateFlow()
+
     private val _isGridView = MutableStateFlow(prefs.getBoolean(KEY_IS_GRID_VIEW, true))
     val isGridView = _isGridView.asStateFlow()
 
@@ -92,12 +95,35 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
             try {
                 val projects = jsonDecoder.decodeFromString<List<Project>>(cachedJson)
                 _projectsList.value = projects
-                
+
                 val lastProjectId = prefs.getString(KEY_LAST_PROJECT, null)
                 val projectToSelect = projects.find { it.id == lastProjectId } ?: projects.firstOrNull()
                 _selectedProject.value = projectToSelect
 
                 updateIconCache(projects)
+                updateBgCache(projects)
+
+                viewModelScope.launch(Dispatchers.IO) {
+                    var changed = false
+                    val migrated = projects.map { p ->
+                        if (p.backgroundPath == null) {
+                            changed = true
+                            val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(getApplication(), p.path)
+                            p.copy(
+                                backgroundPath = assets.backgroundPath ?: "",
+                                iconPath = p.iconPath ?: assets.iconPath ?: ""
+                            )
+                        } else p
+                    }
+                    if (changed) {
+                        withContext(Dispatchers.Main) {
+                            _projectsList.value = migrated
+                            saveProjects(migrated)
+                        }
+                        updateIconCache(migrated)
+                        updateBgCache(migrated)
+                    }
+                }
             } catch (e: Exception) {
                 _projectsList.value = emptyList()
             }
@@ -107,9 +133,11 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
     fun addProject(name: String, version: String, path: String, customIconPath: String?, engineVersion: String?, application: Application) {
         viewModelScope.launch(Dispatchers.IO) {
             var autoIconPath: String? = null
+            var autoBgPath: String? = null
+            val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(application, path)
+            autoBgPath = assets.backgroundPath ?: ""
             if (customIconPath == null) {
-                val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(application, path)
-                autoIconPath = assets.iconPath
+                autoIconPath = assets.iconPath ?: ""
             }
 
             val project = Project(
@@ -118,18 +146,20 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
                 path = path,
                 version = version,
                 iconPath = autoIconPath,
+                backgroundPath = autoBgPath,
                 customIconPath = customIconPath,
                 engineVersion = engineVersion
             )
 
             val newList = _projectsList.value.toMutableList().apply { add(project) }
-            
+
             withContext(Dispatchers.Main) {
                 _projectsList.value = newList
                 onProjectSelected(project)
                 saveProjects(newList)
             }
             updateIconCache(newList)
+            updateBgCache(newList)
         }
     }
 
@@ -148,6 +178,29 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
         prefs.edit().putString(KEY_LAST_PROJECT, project?.id).apply()
     }
     
+    private fun updateBgCache(projects: List<Project>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val newCache = mutableMapOf<String, Bitmap>()
+            projects.forEach { project ->
+                val pathToLoad = project.customBackgroundPath ?: project.backgroundPath?.takeIf { it.isNotBlank() }
+                if (pathToLoad != null) {
+                    try {
+                        if (!_bgCache.value.containsKey(pathToLoad)) {
+                            val bitmap = ru.reset.renplay.utils.GameAssetExtractor.loadBitmap(pathToLoad, 600, 400)
+                            if (bitmap != null) {
+                                newCache[pathToLoad] = bitmap
+                            }
+                        }
+                    } catch (e: Exception) {
+                    }
+                }
+            }
+            if (newCache.isNotEmpty()) {
+                _bgCache.value = _bgCache.value + newCache
+            }
+        }
+    }
+
     private fun updateIconCache(projects: List<Project>) {
         viewModelScope.launch(Dispatchers.IO) {
             val newCache = mutableMapOf<String, Bitmap>()
@@ -177,6 +230,7 @@ class LibraryViewModel(application: Application, private val prefs: SharedPrefer
             _selectedProject.value = updatedProject
         }
         updateIconCache(newList)
+        updateBgCache(newList)
         saveProjects(newList)
     }
 

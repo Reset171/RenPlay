@@ -30,6 +30,7 @@ import ru.reset.renplay.ui.components.feedback.rememberAppBlurState
 import ru.reset.renplay.ui.components.feedback.appBlurEffect
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
@@ -188,12 +189,10 @@ fun EngineSettingsScreen(
                     trailingContent = {
                         AppIconButton(
                             onClick = { engineToDelete = engine.version },
-                            size = 40.dp,
-                            shape = CircleShape,
-                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            iconTint = MaterialTheme.colorScheme.onSurfaceVariant
+                            size = 32.dp,
+                            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
                         ) {
-                            AppIcon(painterResource(R.drawable.ic_delete), null)
+                            AppIcon(painterResource(R.drawable.ic_delete), null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                         }
                     },
                     showDivider = true
@@ -217,14 +216,13 @@ fun EngineSettingsScreen(
                 title = stringResource(R.string.engine_delete_title),
                 icon = painterResource(R.drawable.ic_delete),
                 buttons = { dismiss ->
-                    Row(
+                    AdaptiveButtonLayout(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        spacing = 12.dp
                     ) {
                         AppButton(
                             onClick = { dismiss() },
                             text = stringResource(R.string.action_cancel),
-                            modifier = Modifier.weight(1f),
                             cornerRadius = 16.dp,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -236,7 +234,6 @@ fun EngineSettingsScreen(
                                 engineToDelete = null
                             },
                             text = stringResource(R.string.action_delete),
-                            modifier = Modifier.weight(1f),
                             cornerRadius = 16.dp,
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.error

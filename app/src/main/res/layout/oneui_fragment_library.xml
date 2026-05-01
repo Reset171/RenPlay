@@ -44,13 +44,4 @@
             android:textColor="?android:attr/textColorSecondary" />
     </LinearLayout>
 
-    <dev.oneuiproject.oneui.widget.ScrollAwareFloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="24dp"
-        app:srcCompat="@drawable/ic_oui_add" />
-
 </FrameLayout>

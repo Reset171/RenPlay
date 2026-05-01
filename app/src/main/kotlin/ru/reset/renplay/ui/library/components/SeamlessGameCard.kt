@@ -65,6 +65,7 @@ private val CardGradientBrush = Brush.verticalGradient(
 fun SeamlessGameCard(
     project: Project,
     iconCache: Map<String, Bitmap>,
+    bgCache: Map<String, Bitmap>,
     isGridView: Boolean,
     advancedAnimationsEnabled: Boolean,
     sharedTransitionScope: SharedTransitionScope,
@@ -114,7 +115,7 @@ fun SeamlessGameCard(
         val rightImageAlpha by transition.animateFloat(label = "right_alpha") { if (it) 0f else 1f }
 
         GameCardContent(
-            project = project, iconCache = iconCache, isGridView = isGridView,
+            project = project, iconCache = iconCache, bgCache = bgCache, isGridView = isGridView,
             advancedAnimationsEnabled = true, sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope, scale = scale, elevation = elevation,
             cardRadius = cardRadius, containerColor = containerColor, height = height,
@@ -131,7 +132,7 @@ fun SeamlessGameCard(
         )
     } else {
         GameCardContent(
-            project = project, iconCache = iconCache, isGridView = isGridView,
+            project = project, iconCache = iconCache, bgCache = bgCache, isGridView = isGridView,
             advancedAnimationsEnabled = false, sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope, 
             scale = if (isDragging) 1.05f else 1f, 
@@ -168,6 +169,7 @@ fun SeamlessGameCard(
 private fun GameCardContent(
     project: Project,
     iconCache: Map<String, Bitmap>,
+    bgCache: Map<String, Bitmap>,
     isGridView: Boolean,
     advancedAnimationsEnabled: Boolean,
     sharedTransitionScope: SharedTransitionScope,
@@ -204,25 +206,11 @@ private fun GameCardContent(
     val cardBlurState = rememberAppBlurState()
     cardBlurState.blurEnabled = blurActive
 
-    var rightBgBmp by remember { mutableStateOf<Bitmap?>(null) }
-    val context = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(project.path, project.customBackgroundPath, project.customIconPath, showListBg) {
-        if (!showListBg) {
-            rightBgBmp = null
-            return@LaunchedEffect
-        }
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val assets = ru.reset.renplay.utils.GameAssetExtractor.getGameAssets(context, project.path)
-            val bgPath = project.customBackgroundPath ?: assets.backgroundPath
-            val iconPath = project.customIconPath ?: project.iconPath ?: assets.iconPath
-
-            val pathToLoad = bgPath ?: iconPath
-            if (pathToLoad != null) {
-                val bmp = ru.reset.renplay.utils.GameAssetExtractor.loadBitmap(pathToLoad, 400, 200)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { rightBgBmp = bmp }
-            }
-        }
-    }
+    val bgPathToLoad = project.customBackgroundPath ?: project.backgroundPath?.takeIf { it.isNotBlank() }
+    val iconPathToLoad = project.customIconPath ?: project.iconPath?.takeIf { it.isNotBlank() }
+    val rightBgBmp = if (showListBg) {
+        bgPathToLoad?.let { bgCache[it] } ?: iconPathToLoad?.let { iconCache[it] }
+    } else null
 
     Box(
         modifier = Modifier

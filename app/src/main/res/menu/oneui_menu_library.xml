@@ -20,6 +20,12 @@
         app:iconTint="?attr/actionMenuTextColor"
         app:showAsAction="always" />
     <item
+        android:id="@+id/menu_add_game"
+        android:icon="@drawable/ic_add"
+        android:title="@string/add_game_title"
+        app:iconTint="?attr/actionMenuTextColor"
+        app:showAsAction="always" />
+    <item
         android:id="@+id/nav_settings"
         android:title="@string/nav_settings"
         app:showAsAction="never" />

@@ -276,23 +276,14 @@ public class PythonSDLActivity extends SDLActivity {
             nativeSetEnv("ANDROID_PUBLIC", mGamePath);
             nativeSetEnv("RENPY_SAVE_PATH", getFilesDir().getAbsolutePath() + "/saves/" + mGamePath.hashCode());
 
-            try {
-                File gameDir = new File(mGamePath, "game");
-                if (gameDir.exists() && gameDir.isDirectory()) {
-                    File translatorScript = new File(gameDir, "00renplay_translator.rpy");
-                    InputStream is = getAssets().open("00renplay_translator.rpy");
-                    FileOutputStream fos = new FileOutputStream(translatorScript);
-                    byte[] buffer = new byte[8192];
-                    int length;
-                    while ((length = is.read(buffer)) > 0) {
-                        fos.write(buffer, 0, length);
-                    }
-                    fos.flush();
-                    fos.close();
-                    is.close();
-                }
-            } catch (Exception e) {
-                Log.e("PythonSDLActivity", "Failed to inject translator script", e);
+            // The live translator is now integrated at the engine level
+            // (renpy.renplay_translator). No script injection is needed —
+            // the engine reads RenPlayPrefs.enable_translation itself.
+            File legacyTranslator = new File(new File(mGamePath, "game"), "00renplay_translator.rpy");
+            if (legacyTranslator.exists()) {
+                legacyTranslator.delete();
+                File legacyCompiled = new File(legacyTranslator.getAbsolutePath() + "c");
+                if (legacyCompiled.exists()) legacyCompiled.delete();
             }
         } else {
             nativeSetEnv("ANDROID_PUBLIC", externalStorage.getAbsolutePath());

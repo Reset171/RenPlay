@@ -109,6 +109,7 @@ fun AppearanceScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val settingsViewModel: SettingsViewModel = viewModel(viewModelStoreOwner = context as androidx.activity.ComponentActivity, factory = AppViewModelProvider.Factory)
     val useGameDetailsScreen by settingsViewModel.useGameDetailsScreen.collectAsState()
+    val useListControlStyle by settingsViewModel.useListControlStyle.collectAsState()
     val advancedAnimationsEnabled by settingsViewModel.advancedAnimationsEnabled.collectAsState()
     val showListBg by settingsViewModel.showListBg.collectAsState()
 
@@ -251,6 +252,20 @@ fun AppearanceScreen(
                     AppSwitch(
                         checked = useGameDetailsScreen,
                         onCheckedChange = { settingsViewModel.onUseGameDetailsChanged(it) }
+                    )
+                },
+                showDivider = true
+            )
+
+            SettingsItem(
+                title = stringResource(R.string.setting_list_control_style),
+                description = stringResource(R.string.setting_list_control_style_desc),
+                icon = painterResource(id = R.drawable.ic_view_list),
+                onClick = { settingsViewModel.onUseListControlStyleChanged(!useListControlStyle) },
+                trailingContent = {
+                    AppSwitch(
+                        checked = useListControlStyle,
+                        onCheckedChange = { settingsViewModel.onUseListControlStyleChanged(it) }
                     )
                 },
                 showDivider = false

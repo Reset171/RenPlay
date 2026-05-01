@@ -72,6 +72,7 @@ import ru.reset.renplay.ui.navigation.Screen
 import ru.reset.renplay.ui.components.appbar.AppFloatingToolbar
 import ru.reset.renplay.ui.library.components.*
 import ru.reset.renplay.ui.settings.SettingsViewModel
+import ru.reset.renplay.ui.settings.AppSelectionItem
 import ru.reset.renplay.ui.settings.components.*
 import java.io.File
 
@@ -98,6 +99,7 @@ fun LibraryScreen(
     val projectsList by viewModel.projectsList.collectAsState()
     val filteredProjects by viewModel.filteredProjects.collectAsState()
     val iconCache by viewModel.iconCache.collectAsState()
+    val bgCache by viewModel.bgCache.collectAsState()
     val isGridView by viewModel.isGridView.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
@@ -244,6 +246,7 @@ fun LibraryScreen(
                     gridState = gridState,
                     topPadding = paddingValues.calculateTopPadding() + 80.dp,
                     iconCache = iconCache,
+                    bgCache = bgCache,
                     isGridView = isGridView,
                     sortOrder = sortOrder,
                     searchQuery = searchQuery,
@@ -387,34 +390,31 @@ fun LibraryScreen(
                 title = stringResource(R.string.action_sort),
                 icon = painterResource(R.drawable.ic_sort)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 16.dp)) {
-                    SettingsItem(
-                        title = stringResource(R.string.sort_newest),
-                        icon = null,
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 16.dp)) {
+                    AppSelectionItem(
+                        text = stringResource(R.string.sort_newest),
+                        isSelected = sortOrder == LibraryViewModel.SortOrder.NEWEST_FIRST,
                         onClick = {
                             viewModel.updateSortOrder(LibraryViewModel.SortOrder.NEWEST_FIRST)
                             showSortMenu = false
-                        },
-                        showDivider = true
+                        }
                     )
-                    SettingsItem(
-                        title = stringResource(R.string.sort_alphabetical),
-                        icon = null,
+                    AppSelectionItem(
+                        text = stringResource(R.string.sort_alphabetical),
+                        isSelected = sortOrder == LibraryViewModel.SortOrder.ALPHABETICAL,
                         onClick = {
                             viewModel.updateSortOrder(LibraryViewModel.SortOrder.ALPHABETICAL)
                             showSortMenu = false
-                        },
-                        showDivider = true
+                        }
                     )
-                    SettingsItem(
-                        title = stringResource(R.string.sort_manual),
-                        icon = null,
+                    AppSelectionItem(
+                        text = stringResource(R.string.sort_manual),
+                        isSelected = sortOrder == LibraryViewModel.SortOrder.MANUAL,
                         onClick = {
                             viewModel.updateSortOrder(LibraryViewModel.SortOrder.MANUAL)
                             showSortMenu = false
                             appToast.show(context.getString(R.string.sort_manual_hint), R.drawable.ic_info)
-                        },
-                        showDivider = false
+                        }
                     )
                 }
             }

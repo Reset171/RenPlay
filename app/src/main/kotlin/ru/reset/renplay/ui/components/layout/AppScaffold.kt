@@ -30,6 +30,7 @@ fun AppScaffold(
     containerColor: Color = MaterialTheme.colorScheme.background,
     contentColor: Color = MaterialTheme.colorScheme.onBackground,
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    showTopBottomGradients: Boolean = true,
     content: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
@@ -50,37 +51,39 @@ fun AppScaffold(
         ) {
             content(paddingValues)
 
-            Box(
-                modifier = Modifier
-                    .align(androidx.compose.ui.Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(paddingValues.calculateTopPadding() + 16.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                containerColor,
-                                containerColor.copy(alpha = 0.65f),
-                                Color.Transparent
+            if (showTopBottomGradients) {
+                Box(
+                    modifier = Modifier
+                        .align(androidx.compose.ui.Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(paddingValues.calculateTopPadding() + 16.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    containerColor,
+                                    containerColor.copy(alpha = 0.65f),
+                                    Color.Transparent
+                                )
                             )
                         )
-                    )
-            )
+                )
 
-            Box(
-                modifier = Modifier
-                    .align(androidx.compose.ui.Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(paddingValues.calculateBottomPadding() + 16.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                containerColor.copy(alpha = 0.65f),
-                                containerColor
+                Box(
+                    modifier = Modifier
+                        .align(androidx.compose.ui.Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(paddingValues.calculateBottomPadding() + 16.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    containerColor.copy(alpha = 0.65f),
+                                    containerColor
+                                )
                             )
                         )
-                    )
-            )
+                )
+            }
 
             Box(modifier = Modifier.align(androidx.compose.ui.Alignment.TopCenter)) {
                 topBar()

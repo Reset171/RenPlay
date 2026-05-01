@@ -74,11 +74,11 @@ fun AppButton(
 
     Surface(
         onClick = { if (enabled) onClick() },
-        modifier = modifier.graphicsLayer { 
+        modifier = Modifier.graphicsLayer { 
             scaleX = scale
             scaleY = scale
             alpha = if (enabled) 1f else 0.6f 
-        },
+        }.then(modifier),
         enabled = enabled,
         shape = RoundedCornerShape(cornerRadius),
         shadowElevation = elevation,

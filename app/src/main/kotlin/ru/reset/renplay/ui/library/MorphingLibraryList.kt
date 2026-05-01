@@ -39,6 +39,7 @@ fun MorphingLibraryList(
     gridState: LazyGridState,
     topPadding: androidx.compose.ui.unit.Dp,
     iconCache: Map<String, Bitmap>,
+    bgCache: Map<String, Bitmap>,
     isGridView: Boolean,
     sortOrder: LibraryViewModel.SortOrder,
     searchQuery: String,
@@ -138,6 +139,7 @@ fun MorphingLibraryList(
                 SeamlessGameCard(
                     project = project,
                     iconCache = iconCache,
+                    bgCache = bgCache,
                     isGridView = isGridView,
                     advancedAnimationsEnabled = advancedAnimationsEnabled,
                     sharedTransitionScope = sharedTransitionScope,
