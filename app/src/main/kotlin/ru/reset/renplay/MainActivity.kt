@@ -1,7 +1,9 @@
 package ru.reset.renplay
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.net.Uri
 import android.os.Build
@@ -13,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -137,20 +140,33 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun checkPermission(): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager() else true
+fun checkPermission(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        Environment.isExternalStorageManager()
+    } else {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+    }
 }
 
-fun requestPermission(context: Context, launcher: ActivityResultLauncher<Intent>) {
+fun requestPermission(
+    context: Context,
+    settingsLauncher: ActivityResultLauncher<Intent>,
+    runtimeLauncher: ActivityResultLauncher<String>
+) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         try {
             val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
             intent.data = Uri.fromParts("package", context.packageName, null)
-            launcher.launch(intent)
+            settingsLauncher.launch(intent)
         } catch (e: Exception) {
             val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            launcher.launch(intent)
+            settingsLauncher.launch(intent)
         }
+    } else {
+        runtimeLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
 }
 
@@ -168,11 +184,16 @@ fun MainScreen(
     onEnableBlurChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    var hasFilePermission by remember { mutableStateOf(checkPermission()) }
+    var hasFilePermission by remember { mutableStateOf(checkPermission(context)) }
     val filePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
-        hasFilePermission = checkPermission()
+        hasFilePermission = checkPermission(context)
+    }
+    val runtimePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        hasFilePermission = checkPermission(context)
     }
 
     val appBlurState = rememberAppBlurState()
@@ -188,7 +209,7 @@ fun MainScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             if (!hasFilePermission) {
-                PermissionRequestUI { requestPermission(context, filePermissionLauncher) }
+                PermissionRequestUI { requestPermission(context, filePermissionLauncher, runtimePermissionLauncher) }
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.fillMaxSize().appBlurSource(appBlurState)) {
