@@ -6,15 +6,51 @@
 Android-лаунчер для запуска визуальных новелл на движке [Ren'Py](https://www.renpy.org/). Позволяет устанавливать разные версии движка в виде плагинов и запускать игры напрямую из директорий во внутренней памяти устройства.
 
 ## Возможности
-* Поддержка нескольких версий Ren'Py (установка движков из `.zip` архивов).
-* Статистика игрового времени.
-* Создание ярлыков игр на главном экране.
+
+### Управление играми и движками
+* Поддержка нескольких версий Ren'Py — движки устанавливаются как плагины из `.zip` архивов.
+* Автоматическое определение названия, версии, иконки и нужного движка из файлов игры.
+* Редактирование свойств игры: название, иконка, фон, параметры запуска.
+* Создание ярлыков игр на главном экране устройства.
+* Статистика игрового времени (всего и за сегодня).
+* Просмотр и копирование логов Ren'Py для отладки.
+* Отдельный экран «Об игре» с подробной информацией перед запуском.
+
+### Библиотека
+* Поиск по библиотеке.
+* Сортировка: сначала новые, по алфавиту или вручную (перетаскиванием).
+* Переключение вида списка и сетки.
+* Отображение фонов игр в карточках.
+
+### Интерфейс и оформление
+* Два стиля интерфейса на выбор: Material You и OneUI.
+
+### Инструменты для работы с играми
+* Офлайн-перевод текста в играх через Google ML Kit с кэшированием фонов.
+* Декомпиляция файлов `.rpyc` обратно в `.rpy`.
+* Распаковка архивов `.rpa`.
 
 ## Скриншоты
+
+### Material You
 <p align="center">
-  <img src="docs/screenshots/1.png" width="30%" />
-  <img src="docs/screenshots/2.png" width="30%" />
-  <img src="docs/screenshots/3.png" width="30%" />
+  <img src="docs/screenshots/materialyou1.png" width="24%" />
+  <img src="docs/screenshots/materialyou2.png" width="24%" />
+  <img src="docs/screenshots/materialyou3.png" width="24%" />
+  <img src="docs/screenshots/materialyou4.png" width="24%" />
+  <img src="docs/screenshots/materialyou5.png" width="24%" />
+  <img src="docs/screenshots/materialyou6.png" width="24%" />
+  <img src="docs/screenshots/materialyou7.png" width="24%" />
+  <img src="docs/screenshots/materialyou8.png" width="24%" />
+</p>
+
+### OneUI
+<p align="center">
+  <img src="docs/screenshots/oneui1.png" width="24%" />
+  <img src="docs/screenshots/oneui2.png" width="24%" />
+  <img src="docs/screenshots/oneui3.png" width="24%" />
+  <img src="docs/screenshots/oneui4.png" width="24%" />
+  <img src="docs/screenshots/oneui5.png" width="24%" />
 </p>
 
 ## Установка
