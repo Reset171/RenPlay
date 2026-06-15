@@ -193,11 +193,27 @@ class RenpyDecompiler(
 
     private fun getPyExprValue(obj: Any?): String? {
         if (obj == null) return null
-        if (obj is AstNode && obj.attrs["__is_pyexpr__"] == true) {
-            return obj.getString("value") ?: obj.toString()
+        if (obj is AstNode) {
+            if (obj.attrs["__is_pyexpr__"] == true || obj.className.endsWith("PyExpr")) {
+                return obj.getString("value") ?: obj.getString("s") ?: obj.toString()
+            }
         }
         if (obj is String) return obj
         return obj.toString()
+    }
+
+    private fun consumePairedWith(): String? {
+        if (pairedWith != null && pairedWith != false && pairedWith != true) {
+            if (index + 1 < block.size) {
+                val nextNode = block[index + 1]
+                if (nextNode is AstNode && isClass(nextNode, "With")) {
+                    val expr = getPyExprValue(nextNode["expr"]) ?: nextNode.getString("expr") ?: ""
+                    pairedWith = true
+                    return expr
+                }
+            }
+        }
+        return null
     }
 
     private fun getSource(codeNode: Any?): String? {
@@ -302,17 +318,17 @@ class RenpyDecompiler(
         val begin = if (expression != null && expression.toString().isNotEmpty()) {
             "expression ${getPyExprValue(expression) ?: expression}"
         } else {
-            val names = (nameTuple as? List<*>)?.joinToString(" ") ?: nameTuple?.toString() ?: ""
+            val names = (nameTuple as? List<*>)?.joinToString(" ") { getPyExprValue(it) ?: it.toString() } ?: nameTuple?.toString() ?: ""
             names
         }
         write(begin)
 
         val words = mutableListOf<String>()
         if (tag != null && tag.toString().isNotEmpty()) words.add("as $tag")
-        if (behind is List<*> && behind.isNotEmpty()) words.add("behind ${behind.joinToString(", ")}")
+        if (behind is List<*> && behind.isNotEmpty()) words.add("behind ${behind.joinToString(", ") { getPyExprValue(it) ?: it.toString() }}")
         if (layer is String && layer.isNotEmpty()) words.add("onlayer $layer")
-        if (zorder != null && zorder.toString() != "null") words.add("zorder $zorder")
-        if (atList is List<*> && atList.isNotEmpty()) words.add("at ${atList.joinToString(", ")}")
+        if (zorder != null && zorder.toString() != "null") words.add("zorder ${getPyExprValue(zorder) ?: zorder}")
+        if (atList is List<*> && atList.isNotEmpty()) words.add("at ${atList.joinToString(", ") { getPyExprValue(it) ?: it.toString() }}")
 
         if (words.isNotEmpty()) {
             write(" ${words.joinToString(" ")}")
@@ -774,6 +790,8 @@ class RenpyDecompiler(
         write("show ")
         val imspec = getImspec(ast)
         printImspec(imspec)
+        val withExpr = consumePairedWith()
+        if (withExpr != null) write(" with $withExpr")
         val atl = ast.getNode("atl")
         if (atl != null) {
             write(":")
@@ -787,8 +805,10 @@ class RenpyDecompiler(
         write("show layer $layer")
         val atList = ast.getList("at_list")
         if (atList.isNotEmpty()) {
-            write(" at ${atList.joinToString(", ")}")
+            write(" at ${atList.joinToString(", ") { getPyExprValue(it) ?: it.toString() }}")
         }
+        val withExpr = consumePairedWith()
+        if (withExpr != null) write(" with $withExpr")
         val atl = ast.getNode("atl")
         if (atl != null) {
             write(":")
@@ -807,6 +827,8 @@ class RenpyDecompiler(
             write(" ")
             printImspec(imspec)
         }
+        val withExpr = consumePairedWith()
+        if (withExpr != null) write(" with $withExpr")
         val atl = ast.getNode("atl")
         if (atl != null) {
             write(":")
@@ -818,6 +840,8 @@ class RenpyDecompiler(
         indent()
         write("hide ")
         printImspec(getImspec(ast))
+        val withExpr = consumePairedWith()
+        if (withExpr != null) write(" with $withExpr")
     }
 
     private fun printWith(ast: AstNode) {
@@ -844,7 +868,9 @@ class RenpyDecompiler(
         val layer = ast.getString("layer") ?: "master"
         if (layer != "master") write(" $layer")
         val atList = ast.getList("at_list")
-        if (atList.isNotEmpty()) write(" at ${atList.joinToString(", ")}")
+        if (atList.isNotEmpty()) write(" at ${atList.joinToString(", ") { getPyExprValue(it) ?: it.toString() }}")
+        val withExpr = consumePairedWith()
+        if (withExpr != null) write(" with $withExpr")
         val atl = ast.getNode("atl")
         if (atl != null) {
             write(":")
@@ -1601,6 +1627,7 @@ class RenpyDecompiler(
     private fun printAtlMultipurpose(stmt: AstNode) {
         indent()
         val parts = mutableListOf<String>()
+        var somethingWritten = false
 
         val warper = stmt.getString("warp_function") ?: stmt.getString("warper")
         val duration = getPyExprValue(stmt["duration"]) ?: stmt.getString("duration") ?: ""
@@ -1629,6 +1656,12 @@ class RenpyDecompiler(
                 if (expr.size > 1 && expr[1] != null) {
                     val withClause = getPyExprValue(expr[1]) ?: expr[1].toString()
                     if (withClause.isNotEmpty() && withClause != "null") {
+                        if (parts.isNotEmpty()) {
+                            write(parts.joinToString(" "))
+                            parts.clear()
+                            somethingWritten = true
+                            indent()
+                        }
                         parts.add("with $withClause")
                     }
                 }
@@ -1638,7 +1671,7 @@ class RenpyDecompiler(
         val splines = stmt.getList("splines")
         for (spline in splines) {
             if (spline is List<*> && spline.size >= 2) {
-                parts.add("${spline[0]} ${spline.drop(1).joinToString(" ")}")
+                parts.add("${spline[0]} ${spline.drop(1).joinToString(" ") { getPyExprValue(it) ?: it.toString() }}")
             }
         }
 
@@ -1650,9 +1683,9 @@ class RenpyDecompiler(
             parts.add("circles ${circles}")
         }
 
-        if (parts.isEmpty()) {
+        if (parts.isEmpty() && !somethingWritten) {
             write("pass")
-        } else {
+        } else if (parts.isNotEmpty()) {
             write(parts.joinToString(" "))
         }
     }
